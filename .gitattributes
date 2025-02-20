@@ -1,2 +1,21 @@
-# Set all files to use LF line endings
+# Set all text files to use LF line endings
 * text=auto eol=lf
+
+# Explicitly enforce LF for common scripts and code files
+*.sh text eol=lf
+*.js text eol=lf
+*.py text eol=lf
+*.java text eol=lf
+*.ts text eol=lf
+
+# Keep Windows batch files and PowerShell scripts in CRLF (Windows users)
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Prevent Git from modifying binary files
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
