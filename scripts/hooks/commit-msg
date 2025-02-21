@@ -1,0 +1,71 @@
+#!/bin/sh
+
+# Script to validate commit messages against a specific format.
+# Usage: ./validate-commit-msg.sh <commit-message-file>
+
+# Check if the commit message file is provided
+if [ -z "$1" ]; then
+  echo "ERROR: Commit message file not provided."
+  echo "==============================================="
+  exit 1
+fi
+
+# Read the commit message from the file
+commit_msg_file="$1"
+commit_msg=$(cat "$commit_msg_file")
+
+# Define the regex pattern for the required format
+regex="^[A-Za-z]{2}-[0-9]{2}: .+"
+
+# Check if the commit message matches the pattern
+if ! echo "$commit_msg" | grep -Eq "$regex"; then
+  echo "ERROR: Commit message does not follow the required format."
+  echo "==============================================="
+  echo "The correct format is: '[TYPE]-[NUMBER]: (title)', where:"
+  echo ""
+  echo "  - [TYPE] is a 2-letter code. Valid options are:"
+  echo "    FE: Frontend development tasks"
+  echo "    BE: Backend development tasks (e.g., APIs, Databases)"
+  echo "    CI: CI/CD tasks"
+  echo "    DEV: General development tasks, infrastructure, refactoring"
+  echo "    QE: Tasks related to testing and quality assurance"
+  echo "    DOC: Documentation updates"
+  echo ""
+  echo "  - [NUMBER] is a two-digit number (e.g., '01', '02')"
+  echo "  - [Title] is a brief description of the change"
+  echo ""
+  echo "Example: 'FE-01: Implement navigation bar'"
+  echo "==============================================="
+  exit 1  # Reject the commit
+fi
+
+# Extract the type and number from the commit message
+type=$(echo "$commit_msg" | cut -d '-' -f 1)
+number=$(echo "$commit_msg" | cut -d '-' -f 2 | cut -d ':' -f 1)
+
+# Validate the type against valid options
+valid_types="FE, BE, CI, DEV, QE, DOC"
+if ! echo "$valid_types" | grep -qw "$type"; then
+  echo "ERROR: Invalid type '$type'. Valid types are:"
+  echo "==============================================="
+  echo "  FE (Frontend)"
+  echo "  BE (Backend)"
+  echo "  CI (Continuous Integration)"
+  echo "  DEV (Development)"
+  echo "  QE (Quality Engineering)"
+  echo "  DOC (Documentation)"
+  echo "==============================================="
+  exit 1
+fi
+
+# Validate the number is a two-digit number
+if ! echo "$number" | grep -Eq "^[0-9]{2}$"; then
+  echo "ERROR: Invalid number '$number'. It must be a two-digit number (e.g., '01', '02')."
+  echo "==============================================="
+  exit 1
+fi
+
+# If all checks pass, accept the commit
+echo "Commit message is valid!"
+echo "==============================================="
+exit 0
