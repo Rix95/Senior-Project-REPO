@@ -32,7 +32,7 @@ Create a `.env` file in the project root with your Neo4j credentials:
 NEO4J_IP=your.neo4j.external.ip
 NEO4J_USER=neo4j
 NEO4J_PASS=your_password
-
+```
 ---
 
 # Running the Containers
@@ -48,7 +48,7 @@ Run the following command:
 
 ```bash
 docker-compose up --build
-
+```
 ## This Will
 - Build the **Python backend** image.  
 - Build the **Vue (Vite) frontend** image.  
@@ -85,11 +85,11 @@ To keep the backend running persistently (e.g., as an API), consider:
 #### Example (Flask)
 ```dockerfile
 CMD ["python", "app.py"]
-
+```
 ## Example (FastAPI with Uvicorn)
 ```dockerfile
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]
-
+```
 ## Neo4j Configuration
 - We are referencing an **external Neo4j instance** (e.g., on GCP).  
 - Ensure your **firewall rules** allow inbound traffic on **port 7687**.  
@@ -106,10 +106,6 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]
 ### 📁 Docker Volumes (For Local Development)
 - If you want **immediate code changes**, you can **uncomment** the volume mappings in `docker-compose.yml` under the frontend service.  
 - However, be mindful of handling `node_modules`.  
-
----
-
-## 📌 Happy Coding! 🚀
 
 ---
 
