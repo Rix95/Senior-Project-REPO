@@ -1,2 +1,3 @@
 venv/
 src/backend/ecosystem_data/
+.env
