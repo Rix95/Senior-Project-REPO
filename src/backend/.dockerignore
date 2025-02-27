@@ -1,0 +1,25 @@
+# Ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore virtual environment folders
+env/
+venv/
+
+# Ignore local configuration files (if any)
+.env
+*.env
+
+# Ignore the ecosystem_data folder (since it's generated at runtime)
+ecosystem_data/
+
+# Ignore Git metadata
+.git
+.gitignore
+
+# Optionally ignore test directories or other development artifacts
+tests/
+.DS_Store
+Thumbs.db
+.vscode/
