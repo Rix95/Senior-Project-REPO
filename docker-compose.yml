@@ -25,9 +25,9 @@ services:
       - ROLLUP_DISABLE_NATIVE=1
     ports:
       - "5173:5173" 
-    # volumes:
-    #   - ./src/vulnerability-frontend:/app
-    #   - node_modules:/app/node_modules
+    volumes:
+      - ./src/vulnerability-frontend:/app
+      - node_modules:/app/node_modules
     networks:
       - app-network
     depends_on:
