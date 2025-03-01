@@ -1,27 +1,51 @@
+version: '3.8'
+
 services:
-  backend:
+  fastapi:
     build:
-      context: ./src/backend
-    container_name: backend
+      context: ./src/backend/api
+      dockerfile: Dockerfile
+    container_name: fastapi
     env_file:
       - .env
-    environment:
-      - VITE_API_URL=http://backend:5000
-      - NEO4J_URI=bolt://${NEO4J_IP}:7687
-      - ROLLUP_DISABLE_NATIVE=1
     ports:
-      - "5000:5000"
+      - "8000:8000"
     volumes:
-      - ./src/backend:/app
+      - ./src/backend/api:/app
+       - /app/.venv
+    environment:
+      - VITE_API_URL=http://fastapi:8000
+      - PYTHONUNBUFFERED=1
+      - ROLLUP_DISABLE_NATIVE=1
+    restart: unless-stopped
     networks:
       - app-network
+
+
+# services:
+#   backend:
+#     build:
+#       context: ./src/backend/api
+#     container_name: backend
+#     env_file:
+#       - .env
+#     environment:
+#       - VITE_API_URL=http://backend:5000
+#       - NEO4J_URI=bolt://${NEO4J_IP}:7687
+#       - ROLLUP_DISABLE_NATIVE=1
+#     ports:
+#       - "5000:5000"
+#     volumes:
+#       - ./src/backend/api:/app
+#     networks:
+#       - app-network
       
   frontend:
     build:
       context: ./src/vulnerability-frontend
     container_name: frontend
     environment:
-      - VITE_API_URL=http://backend:5000
+      - VITE_API_URL=http://backend:8000 # Should we change this por for 8000?
       - ROLLUP_DISABLE_NATIVE=1
     ports:
       - "5173:5173" 
@@ -31,7 +55,7 @@ services:
     networks:
       - app-network
     depends_on:
-      - backend
+      - fastapi
 
 volumes:
   node_modules:
