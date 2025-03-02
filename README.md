@@ -50,14 +50,14 @@ Run the following command:
 docker-compose up --build
 ```
 ## This Will
-- Build the **Python backend** image.  
+- Build the **FASTAPI backend** image.  
 - Build the **Vue (Vite) frontend** image.  
 - Start both containers on a Docker network (`app-network`).  
 
 ---
 
 ## 4. Check Logs
-- The backend runs `neo4j_connection.py`, which prints **"Connection Successful!"** upon successfully connecting to Neo4j, then exits.  
+- The backend runs `main.py`, which prints **"Hello from FASTAPI!"** upon successfully connecting to FastAPI on 8080 port.  
 - The frontend starts a **Vite dev server** at [http://localhost:5173](http://localhost:5173).
 
 ---
@@ -71,25 +71,18 @@ Open your browser and go to:
 ## Notes on the Backend
 
 ### ✅ Current Behavior
-- The backend script (`neo4j_connection.py`) **verifies connectivity** to Neo4j and then **exits** with code `0`.  
+- The backend runs a FastAPI server  
 - This is fine for **testing** but not suitable for a **long-running API**.
 
 ---
 
 ### 🔄 Future Implementation
-To keep the backend running persistently (e.g., as an API), consider:
+1. **Adding** try points for FASTAPI url.
+2 **Attaching** neo4j database to FASTAPI potentially in a new container.
 
-1. **Replacing** `neo4j_connection.py` with a **web framework** such as **Flask** or **FastAPI**.  
-2. **Changing** the `CMD` in `src/backend/Dockerfile` to run your server:
+## FastAPI Configuration
+- TBD
 
-#### Example (Flask)
-```dockerfile
-CMD ["python", "app.py"]
-```
-## Example (FastAPI with Uvicorn)
-```dockerfile
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]
-```
 ## Neo4j Configuration
 - We are referencing an **external Neo4j instance** (e.g., on GCP).  
 - Ensure your **firewall rules** allow inbound traffic on **port 7687**.  
