@@ -17,29 +17,43 @@ services:
       - VITE_API_URL=http://fastapi:8000
       - PYTHONUNBUFFERED=1
       - ROLLUP_DISABLE_NATIVE=1
+        # Neo4j connection variables reference the same env variables TODOTODOTDOO
     restart: unless-stopped
     networks:
       - app-network
+    depends_on:
+        neo4j:
+         condition: service_healthy
 
 
-# services:
-#   backend:
-#     build:
-#       context: ./src/backend/api
-#     container_name: backend
-#     env_file:
-#       - .env
-#     environment:
-#       - VITE_API_URL=http://backend:5000
-#       - NEO4J_URI=bolt://${NEO4J_IP}:7687
-#       - ROLLUP_DISABLE_NATIVE=1
-#     ports:
-#       - "5000:5000"
-#     volumes:
-#       - ./src/backend/api:/app
-#     networks:
-#       - app-network
-      
+  neo4j:
+      image: neo4j:5.13.0
+      container_name: neo4j
+      ports:
+        - "7474:7474" # HTTP
+        - "7687:7687" # Bolt
+      volumes:
+        - neo4j_data:/data
+        - neo4j_logs:/logs
+        - neo4j_import:/import
+        - neo4j_plugins:/plugins
+      healthcheck:
+        test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "yourpassword", "RETURN 1"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+        start_period: 60s  # Give Neo4j more time to start
+      environment:
+        - NEO4J_AUTH=neo4j/yourpassword
+        - NEO4J_apoc_export_file_enabled=true
+        - NEO4J_apoc_import_file_enabled=true
+        - NEO4J_apoc_import_file_use__neo4j__config=true
+        - NEO4J_dbms_security_procedures_unrestricted=apoc.*,algo.*
+        # Ensure Neo4j listens on all interfaces
+        - NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
+      networks:
+        - app-network
+      restart: unless-stopped      
   frontend:
     build:
       context: ./src/vulnerability-frontend
@@ -59,6 +73,11 @@ services:
 
 volumes:
   node_modules:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_import:
+  neo4j_plugins:
+
 
 networks:
   app-network:
