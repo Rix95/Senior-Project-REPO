@@ -8,6 +8,9 @@ dependencies = [
     "fastapi>=0.115.10",
     "neo4j>=5.28.1",
     "uvicorn>=0.34.0",
+    "pydantic>=2.10.6",
+    "python-dotenv>=0.13",
+
 ]
 
 [dependency-groups]
