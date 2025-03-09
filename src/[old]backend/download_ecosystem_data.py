@@ -8,7 +8,7 @@ import shutil  # For directory operations
 base_url = "https://osv-vulnerabilities.storage.googleapis.com/"
 
 # Directory for storing ecosystem data
-download_dir = "ecosystem_data"
+download_dir = "Senior-Project-REPO/src/[old]backend/ecosystem_data"
 os.makedirs(download_dir, exist_ok=True)
 
 # List of ecosystems
