@@ -5,8 +5,7 @@ import os
 from datetime import datetime
 from vulnerability_repository import repository_exists_in_neo4j, update_repository_in_neo4j, create_repository_in_neo4j, VulnerabilityRepository
 from neo4j_driver import Neo4jDriver
-
-
+from test import test
 load_dotenv()
 # Debugging: Check if the variables are loaded
 #print(f"Loaded Neo4j Username: {os.getenv('NEO4J_PASSWORD')}")

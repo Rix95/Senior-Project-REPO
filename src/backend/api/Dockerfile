@@ -9,6 +9,9 @@ COPY . /app
 WORKDIR /app
 RUN uv sync --frozen --no-cache
 
+# Add the current directory to Python path
+ENV PYTHONPATH="${PYTHONPATH}:/app"
+
 # Run the application
 CMD ["/app/.venv/bin/uvicorn", "main:app", "--port", "8000", "--host", "0.0.0.0"] 
 
