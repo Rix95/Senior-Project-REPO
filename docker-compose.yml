@@ -44,7 +44,7 @@ services:
         start_period: 60s  # Give Neo4j more time to start
 
       environment:
-        - NEO4J_AUTH=neo4j/yourpassword
+        - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
         - NEO4J_apoc_export_file_enabled=true
         - NEO4J_apoc_import_file_enabled=true
         - NEO4J_apoc_import_file_use__neo4j__config=true
