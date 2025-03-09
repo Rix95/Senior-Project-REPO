@@ -9,7 +9,7 @@ from routers.items import vulnerabilities, vulnerabilities_repositories
 
 
 app = FastAPI()
-app.include_router(items.router, prefix="/items/vulnerabilities", tags=["Vulnerabilities"])
+app.include_router(vulnerabilities.router, prefix="/items/vulnerabilities", tags=["Vulnerabilities"])
 
 
 @app.get("/")
