@@ -72,21 +72,18 @@ Open your browser and go to:
 
 ### ✅ Current Behavior
 - The backend runs a FastAPI server  
-- This is fine for **testing** but not suitable for a **long-running API**.
 
 ---
 
 ### 🔄 Future Implementation
 1. **Adding** try points for FASTAPI url.
-2 **Attaching** neo4j database to FASTAPI potentially in a new container.
 
 ## FastAPI Configuration
 - TBD
 
 ## Neo4j Configuration
-- We are referencing an **external Neo4j instance** (e.g., on GCP).  
-- Ensure your **firewall rules** allow inbound traffic on **port 7687**.  
-- The `.env` file should have the correct **`NEO4J_IP`**.  
+- Ensure your **firewall rules** allow inbound traffic on **port 7687**.
+- The `.env` file should have the correct **`NEO4J_URI`**.  
 
 ---
 
