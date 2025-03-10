@@ -7,7 +7,7 @@ router = APIRouter()
 @router.post("/", response_model=Vulnerability)
 def create_vulnerability(vulnerability: Vulnerability):
     query = """
-    QUERY TBD
+    QUERY TBDsu
     """
     result = driver.query(query, {"name": vuln.name, "severity": vuln.severity, "description": vuln.description})
     if not result:
