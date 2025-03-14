@@ -11,7 +11,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./src/backend/api:/app
+      - ./src/backend/api:/app:rw
        - /app/.venv
     environment:
       - VITE_API_URL=http://fastapi:8000

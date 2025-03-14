@@ -1,10 +1,10 @@
 # from dotenv import load_dotenv
-from routers.items import osv_vulnerabilities
+from api.routers.items import osv_vulnerabilities
 from fastapi import FastAPI, HTTPException
-from routers.items import vulnerabilities_repositories
-from osv.download_ecosystem_data import download_and_extract_all_ecosystems
-from osv.fetch_osv_ids import extract_vulnerability_ids
-from osv.osv_vuln_neo4j_loader import load_osv
+from api.routers.items import router as vulnerabilities_repositories
+from api.osv.download_ecosystem_data import download_and_extract_all_ecosystems
+from api.osv.fetch_osv_ids import extract_vulnerability_ids
+from api.osv.osv_vuln_neo4j_loader import load_osv
 # from osv.download_ecosystem_data import  
 # from neo4j import GraphDatabase
 # import os
@@ -17,7 +17,15 @@ from osv.osv_vuln_neo4j_loader import load_osv
 #fetch_osv_ids()
 
 app = FastAPI()
-app.include_router(osv_vulnerabilities.router, prefix="/items/osv_vulnerabilities", tags=["OSV_Vulnerabilities"])
+
+app.include_router(
+    osv_vulnerabilities.router, 
+    prefix="/items/osv_vulnerabilities", 
+    tags=["OSV_Vulnerabilities"]
+)
+# Uncomment and adjust the following line when you have the vulnerabilities_repositories router ready:
+# app.include_router(vulnerabilities_repositories.router, prefix="/items/vulnerabilities_repositories", tags=["Vulnerability Repositories"])
+
 
 
 @app.get("/")

@@ -1,5 +1,5 @@
 from neo4j import GraphDatabase  # Import the Neo4j driver to interact with the database
-from config import NEO4J_PASSWORD, NEO4J_USERNAME, NEO4J_URI
+from src.backend.api.api.config import NEO4J_PASSWORD, NEO4J_USERNAME, NEO4J_URI
 # URI and authentication details for connecting to the Neo4j database
 URI = NEO4J_URI  # The connection URI (Bolt protocol, commonly used for local Neo4j connections)
 AUTH = (NEO4J_USERNAME, NEO4J_PASSWORD)  # The authentication details (username and password) to access Neo4j

@@ -1,7 +1,7 @@
 [project]
 name = "api"
 version = "0.1.0"
-description = "Add your description here"
+description = "LLM-Powered Vulnerability Detection API"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -18,3 +18,6 @@ dependencies = [
 dev = [
     "ruff>=0.9.9",
 ]
+
+[tool.setuptools.packages.find]
+where = ["api"]
