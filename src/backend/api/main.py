@@ -1,6 +1,11 @@
 # from dotenv import load_dotenv
+from routers.items import osv_vulnerabilities
 from fastapi import FastAPI, HTTPException
-from routers.items import vulnerabilities, vulnerabilities_repositories
+from routers.items import vulnerabilities_repositories
+from osv.download_ecosystem_data import download_and_extract_all_ecosystems
+from osv.fetch_osv_ids import extract_vulnerability_ids
+from osv.osv_vuln_neo4j_loader import load_osv
+# from osv.download_ecosystem_data import  
 # from neo4j import GraphDatabase
 # import os
 # from datetime import datetime
@@ -8,14 +13,27 @@ from routers.items import vulnerabilities, vulnerabilities_repositories
 # from neo4j_driver import Neo4jDriver
 
 
+#download_and_extract_all_ecosystems()
+#fetch_osv_ids()
+
 app = FastAPI()
-app.include_router(vulnerabilities.router, prefix="/items/vulnerabilities", tags=["Vulnerabilities"])
+app.include_router(osv_vulnerabilities.router, prefix="/items/osv_vulnerabilities", tags=["OSV_Vulnerabilities"])
 
 
 @app.get("/")
 def main():
     return "Hello from FastAPI!"
 
+@app.post("/update_osv_vulnerabilities")
+def update_osv_vulnerabilities():
+    #1 download vulnerabilities
+    download_and_extract_all_ecosystems()
+    #2 move to id single file json
+    extract_vulnerability_ids()
+    #3 load vulnerabilities
+    load_osv()
+    #query = """
+    #QUERY TBDsu
 
 
 # @app.post("/update_repository/{repository_name}")

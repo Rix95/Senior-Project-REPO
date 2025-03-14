@@ -7,11 +7,14 @@ COPY . /app
 
 # Install the application dependencies
 WORKDIR /app
-RUN uv sync --frozen --no-cache
+
+RUN uv venv .venv
+RUN uv pip install --no-cache -e .
 
 # Add the current directory to Python path
+ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH="${PYTHONPATH}:/app"
 
 # Run the application
-CMD ["/app/.venv/bin/uvicorn", "main:app", "--port", "8000", "--host", "0.0.0.0"] 
+CMD ["uvicorn", "main:app", "--port", "8000", "--host", "0.0.0.0"]
 

@@ -471,5 +471,8 @@ async def main():
     else:
         print("Failed to connect to Neo4j database")
 
+async def load_osv():
+    main()
+    
 if __name__ == "__main__":
     asyncio.run(main())
