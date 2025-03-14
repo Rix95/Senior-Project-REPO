@@ -1,5 +1,5 @@
 import os
-import requests
+import urllib.request
 import concurrent.futures
 from zipfile import ZipFile
 import shutil  # For directory operations
@@ -8,23 +8,28 @@ import shutil  # For directory operations
 base_url = "https://osv-vulnerabilities.storage.googleapis.com/"
 
 # Directory for storing ecosystem data
-download_dir = "Senior-Project-REPO/src/[old]backend/ecosystem_data"
+download_dir = "osv/ecosystem_data"
 os.makedirs(download_dir, exist_ok=True)
 
 # List of ecosystems
+# ecosystems = [
+#     "AlmaLinux", "Alpine", "Android", "Bitnami", "CRAN", "Chainguard", "Debian",
+#     "GIT", "GSD", "GitHub Actions", "Go", "Hackage", "Hex", "Linux", "Mageia",
+#     "Maven", "NuGet", "OSS-Fuzz", "Packagist", "Pub", "PyPI", "Red Hat",
+#     "Rocky Linux", "RubyGems", "SUSE", "SwiftURL", "UVI", "Ubuntu", "Wolfi",
+#     "crates.io", "npm", "openSUSE"
+# ]
+#for testing
 ecosystems = [
-    "AlmaLinux", "Alpine", "Android", "Bitnami", "CRAN", "Chainguard", "Debian",
-    "GIT", "GSD", "GitHub Actions", "Go", "Hackage", "Hex", "Linux", "Mageia",
-    "Maven", "NuGet", "OSS-Fuzz", "Packagist", "Pub", "PyPI", "Red Hat",
-    "Rocky Linux", "RubyGems", "SUSE", "SwiftURL", "UVI", "Ubuntu", "Wolfi",
-    "crates.io", "npm", "openSUSE"
+    "AlmaLinux",
 ]
 
 # Function to download and extract new ecosystem data
 def download_and_extract(ecosystem):
     try:
         print(f"Starting synchronization for {ecosystem}...")
-
+        
+        ecosystem = ecosystem.replace(" ", "%20")
         # URL for downloading the ecosystem data
         url = f"{base_url}{ecosystem}/all.zip"
         
@@ -34,12 +39,16 @@ def download_and_extract(ecosystem):
 
         # Path for the downloaded ZIP file
         zip_file_path = os.path.join(temp_dir, f"{ecosystem}_vulnerabilities.zip")
-        response = requests.get(url)
-
-        if response.status_code == 200:
-            # Save the ZIP file to the temporary directory
+        
+        try:
+            # Download using urllib instead of requests
+            with urllib.request.urlopen(url) as response:
+                content = response.read()
+                
+            # Save the content to the ZIP file
             with open(zip_file_path, 'wb') as f:
-                f.write(response.content)
+                f.write(content)
+                
             print(f"Download complete for {ecosystem}. Extracting...")
 
             # Extract the ZIP file to the temporary directory
@@ -56,9 +65,11 @@ def download_and_extract(ecosystem):
             # Rename the temporary directory to the final ecosystem directory
             os.rename(temp_dir, final_dir)
             print(f"Synchronization complete for {ecosystem}.")
-        else:
-            print(f"Failed to download {ecosystem}, status code {response.status_code}.")
-            # Clean up the temporary directory if download failed
+        except urllib.error.HTTPError as e:
+            print(f"Failed to download {ecosystem}, HTTP error: {e.code}")
+            shutil.rmtree(temp_dir)
+        except urllib.error.URLError as e:
+            print(f"Failed to download {ecosystem}, URL error: {e.reason}")
             shutil.rmtree(temp_dir)
 
     except Exception as e:
@@ -75,6 +86,5 @@ def download_and_extract_all_ecosystems():
 
 # Run the script
 if __name__ == "__main__":
-    print("Starting synchronization process for all ecosystems...")
     download_and_extract_all_ecosystems()
     print("Synchronization process completed.")
