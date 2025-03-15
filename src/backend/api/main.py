@@ -1,7 +1,7 @@
 # from dotenv import load_dotenv
-from routers.items import osv_vulnerabilities
+from routers.items import router as osv_vulnerabilities_router
 from fastapi import FastAPI, HTTPException
-from routers.items import vulnerabilities_repositories
+#from routers.items import vulnerabilities_repositories
 from osv.download_ecosystem_data import download_and_extract_all_ecosystems
 from osv.fetch_osv_ids import extract_vulnerability_ids
 from osv.osv_vuln_neo4j_loader import load_osv
@@ -17,7 +17,7 @@ from osv.osv_vuln_neo4j_loader import load_osv
 #fetch_osv_ids()
 
 app = FastAPI()
-app.include_router(osv_vulnerabilities.router, prefix="/items/osv_vulnerabilities", tags=["OSV_Vulnerabilities"])
+app.include_router(osv_vulnerabilities_router, prefix="/items/osv_vulnerabilities", tags=["OSV_Vulnerabilities"])
 
 
 @app.get("/")
@@ -34,6 +34,7 @@ def update_osv_vulnerabilities():
     load_osv()
     #query = """
     #QUERY TBDsu
+    return {"message": "OSV vulnerabilities updated successfully"}
 
 
 # @app.post("/update_repository/{repository_name}")
@@ -138,4 +139,6 @@ def update_osv_vulnerabilities():
 #     return None
 
 if __name__ == "__main__":
-    main()
+    import uvicorn
+    print("FastAPI server starting with uvicorn...")
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -11,59 +11,56 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./src/backend/api:/app
-       - /app/.venv
+      - ./src:/app/src
+      - venv:/app/.venv
     environment:
       - VITE_API_URL=http://fastapi:8000
       - PYTHONUNBUFFERED=1
-      - ROLLUP_DISABLE_NATIVE=1
+    command: sh -c "pip install uvicorn && python -m src.backend.api.main"
     restart: unless-stopped
     networks:
       - app-network
     depends_on:
-        neo4j:
-         condition: service_healthy
-
+      neo4j:
+        condition: service_healthy
 
   neo4j:
-      image: neo4j:5.13.0
-      container_name: neo4j
-      ports:
-        - "7474:7474" # HTTP
-        - "7687:7687" # Bolt
-      volumes:
-        - neo4j_data:/data
-        - neo4j_logs:/logs
-        - neo4j_import:/import
-        - neo4j_plugins:/plugins
-      healthcheck:
-        test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "yourpassword", "RETURN 1"]
-        interval: 10s
-        timeout: 5s
-        retries: 5
-        start_period: 60s  # Give Neo4j more time to start
+    image: neo4j:5.13.0
+    container_name: neo4j
+    ports:
+      - "7474:7474" # HTTP
+      - "7687:7687" # Bolt
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/import
+      - neo4j_plugins:/plugins
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7474"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s  # Give Neo4j more time to start
+    environment:
+      - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
+      - NEO4J_apoc_export_file_enabled=true
+      - NEO4J_apoc_import_file_enabled=true
+      - NEO4J_apoc_import_file_use__neo4j__config=true
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*,algo.*
+      - NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
+    networks:
+      - app-network
+    restart: unless-stopped
 
-      environment:
-        - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
-        - NEO4J_apoc_export_file_enabled=true
-        - NEO4J_apoc_import_file_enabled=true
-        - NEO4J_apoc_import_file_use__neo4j__config=true
-        - NEO4J_dbms_security_procedures_unrestricted=apoc.*,algo.*
-        # Ensure Neo4j listens on all interfaces
-        - NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
-
-      networks:
-        - app-network
-      restart: unless-stopped      
   frontend:
     build:
       context: ./src/vulnerability-frontend
     container_name: frontend
     environment:
-      - VITE_API_URL=http://fastapi:8000 # Should we change this por for 8000?
+      - VITE_API_URL=http://fastapi:8000
       - ROLLUP_DISABLE_NATIVE=1
     ports:
-      - "5173:5173" 
+      - "5173:5173"
     volumes:
       - ./src/vulnerability-frontend:/app
       - node_modules:/app/node_modules
@@ -78,6 +75,7 @@ volumes:
   neo4j_logs:
   neo4j_import:
   neo4j_plugins:
+  venv:
 
 networks:
   app-network:
