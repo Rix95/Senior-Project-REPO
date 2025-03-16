@@ -1,10 +1,12 @@
 # from dotenv import load_dotenv
 from routers.items import router as osv_vulnerabilities_router
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 #from routers.items import vulnerabilities_repositories
 from osv.download_ecosystem_data import download_and_extract_all_ecosystems
 from osv.fetch_osv_ids import extract_vulnerability_ids
-from osv.osv_vuln_neo4j_loader import load_osv
+from osv.osv_vuln_neo4j_loader import main as load_osv
+from osv.neo4j_connection import get_neo4j_driver
+
 # from osv.download_ecosystem_data import  
 # from neo4j import GraphDatabase
 # import os
@@ -25,118 +27,48 @@ def main():
     return "Hello from FastAPI!"
 
 @app.post("/update_osv_vulnerabilities")
-def update_osv_vulnerabilities():
+async def update_osv_vulnerabilities():
     #1 download vulnerabilities
     download_and_extract_all_ecosystems()
     #2 move to id single file json
     extract_vulnerability_ids()
     #3 load vulnerabilities
-    load_osv()
+    await load_osv()
     #query = """
     #QUERY TBDsu
     return {"message": "OSV vulnerabilities updated successfully"}
 
 
-# @app.post("/update_repository/{repository_name}")
-# def update_repository(repository_name):
-#     #First create Vuln repo object instance
-#         #check if it exists
-#         #if not create it
-#     return "Repo succesfuly created in neo4j"
+#Refactor eventually!
+# Query function to count Vulnerability nodes
+def count_vulnerability_nodes(driver):
+    with driver.session() as session:
+        result = session.run("MATCH (v:Vulnerability) RETURN count(v) AS total")
+        return result.single()["total"]
 
-# @app.post("/repositories/")
-# def create_repository_in_neo4j(repo: VulnerabilityRepository):
-#     """
-#     Create a repository node in Neo4j.
-    
-#     Args:
-#         repo (VulnerabilityRepository): Repository to create
-    
-#     Returns:
-#         The created repository node or None if creation fails
-#     """
-#     try:
-#         # Check if repository exists
-#         if repository_exists_in_neo4j(repo):
-#             # Update the repository if it exists
-#             update_repository_in_neo4j(repo)
-#             return {"message": "Repository updated", "repository": repo}
-#         else:
-              
-#             with Neo4jDriver.get_driver().session() as session:
+# FastAPI endpoint to get vulnerability count
+@app.get("/count_vulnerabilities")
+async def get_vulnerability_count(driver=Depends(get_neo4j_driver)):
+    total = count_vulnerability_nodes(driver)
+    return {"total_vulnerabilities": total}
 
-#                 # Cypher query to create a repository node
-#                 query = """
-#                 CREATE (r:VulnerabilityRepository {
-#                     name: $name, 
-#                     last_updated: $last_updated
-#                 })
-#                 RETURN r
-#                 """
-                
-#                 # Prepare parameters
-#                 params = {
-#                     "name": repo.name,
-#                     "last_updated": repo.last_updated.isoformat(),
-                    
-#                 }
-                
-#                 # Execute the query
-#                 result = session.run(query, params)
-                
-#                 # Fetch the first (and only) record
-#                 record = result.single()
-                
-#                 if record:
-#                     print(f"Repository created: {record['r']}")
-#                     return record['r']
-#                 else:
-#                     print("No repository node was created")
-#                     return None
-                
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
 
-# @app.get("/get_repositories/")
-# async def get_all_vulnerability_repos():
-#     """
-#     Retrieves all nodes with the label VulnerabilityRepository from Neo4j.
-#     """
-#     try:
-#         # Open a session using the Neo4jDriver method
-#         with Neo4jDriver.get_driver().session() as session:
-#             # Cypher query to match all nodes labeled VulnerabilityRepository
-#             query = "MATCH (r:VulnerabilityRepository) RETURN r"
-#             result = session.run(query)
-            
-#             # Convert each node to a more comprehensive dictionary
-#             vulnerability_repos = []
-#             for record in result:
-#                 node = record["r"]
-#                 # Convert node to a dictionary and add element_id
-#                 repo_dict = dict(node)
-#                 repo_dict['element_id'] = node.element_id
-                
-#                 vulnerability_repos.append(repo_dict)
-            
-#             return {
-#                 "count": len(vulnerability_repos),
-#                 "vulnerability_repos": vulnerability_repos
-#             }
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
+# Query function to get the last_updated property
+def get_last_updated(driver):
+    with driver.session() as session:
+        result = session.run(
+            "MATCH (repo:VULN_REPO {name: 'OSV'}) RETURN repo.last_updated AS last_updated"
+        )
+        record = result.single()
+        return record["last_updated"] if record else None
 
-# @app.post("add_vulnerability")
-# def add_vulnerability(vulnerability, repository: str=None):
-#     return None
-
-# @app.get("get_vulnerability")
-# def get_vulnerability(vulnerability):
-#     return None
-
-# @app.get("get_total_vulnerabilities")
-# def get_vulnerability(repository: str="all"): #default behavior should retrieve total number of all repositories in all repos.
-#     return None
+# FastAPI endpoint to return last_updated
+@app.get("/last_updated")
+async def fetch_last_updated(driver=Depends(get_neo4j_driver)):
+    last_updated = get_last_updated(driver)
+    if last_updated is None:
+        return {"error": "Repository not found"}
+    return {"last_updated": last_updated}
 
 if __name__ == "__main__":
     import uvicorn
