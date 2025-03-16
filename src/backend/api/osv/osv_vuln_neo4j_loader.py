@@ -11,7 +11,7 @@ import aiohttp
 import asyncio
 import time
 import random
-from neo4j_connection import get_neo4j_driver
+from osv.neo4j_connection import get_neo4j_driver
 from concurrent.futures import ThreadPoolExecutor
 
 async def fetch_vulnerability_data(vuln_id, session, semaphore):
@@ -471,5 +471,8 @@ async def main():
     else:
         print("Failed to connect to Neo4j database")
 
+async def load_osv():
+    main()
+    
 if __name__ == "__main__":
     asyncio.run(main())
