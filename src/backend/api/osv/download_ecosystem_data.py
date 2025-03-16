@@ -12,17 +12,17 @@ download_dir = "osv/ecosystem_data"
 os.makedirs(download_dir, exist_ok=True)
 
 # List of ecosystems
-# ecosystems = [
-#     "AlmaLinux", "Alpine", "Android", "Bitnami", "CRAN", "Chainguard", "Debian",
-#     "GIT", "GSD", "GitHub Actions", "Go", "Hackage", "Hex", "Linux", "Mageia",
-#     "Maven", "NuGet", "OSS-Fuzz", "Packagist", "Pub", "PyPI", "Red Hat",
-#     "Rocky Linux", "RubyGems", "SUSE", "SwiftURL", "UVI", "Ubuntu", "Wolfi",
-#     "crates.io", "npm", "openSUSE"
-# ]
-#for testing
 ecosystems = [
-    "AlmaLinux",
+    "AlmaLinux", "Alpine", "Android", "Bitnami", "CRAN", "Chainguard", "Debian",
+    "GIT", "GSD", "GitHub Actions", "Go", "Hackage", "Hex", "Linux", "Mageia",
+    "Maven", "NuGet", "OSS-Fuzz", "Packagist", "Pub", "PyPI", "Red Hat",
+    "Rocky Linux", "RubyGems", "SUSE", "SwiftURL", "UVI", "Ubuntu", "Wolfi",
+    "crates.io", "npm", "openSUSE"
 ]
+#for testing
+# ecosystems = [
+#     "AlmaLinux",
+# ]
 
 # Function to download and extract new ecosystem data
 def download_and_extract(ecosystem):
