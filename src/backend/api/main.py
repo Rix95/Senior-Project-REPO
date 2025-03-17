@@ -6,6 +6,7 @@ from osv.download_ecosystem_data import download_and_extract_all_ecosystems
 from osv.fetch_osv_ids import extract_vulnerability_ids
 from osv.osv_vuln_neo4j_loader import main as load_osv
 from osv.neo4j_connection import get_neo4j_driver
+from apscheduler.schedulers.background import BackgroundScheduler
 
 
 app = FastAPI()
@@ -35,6 +36,12 @@ async def update_osv_vulnerabilities():
     #query = """
     #QUERY TBDsu
     return {"message": "OSV vulnerabilities updated successfully"}
+
+#Run script every week
+scheduler = BackgroundScheduler()
+scheduler.add_job(update_osv_vulnerabilities, "interval", weeks=1)
+scheduler.start()
+
 
 
 #Refactor eventually!
