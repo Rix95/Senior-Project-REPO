@@ -1,24 +1,22 @@
-# from dotenv import load_dotenv
+
 from routers.items import router as osv_vulnerabilities_router
 from fastapi import Depends, FastAPI, HTTPException
-#from routers.items import vulnerabilities_repositories
+from fastapi.middleware.cors import CORSMiddleware
 from osv.download_ecosystem_data import download_and_extract_all_ecosystems
 from osv.fetch_osv_ids import extract_vulnerability_ids
 from osv.osv_vuln_neo4j_loader import main as load_osv
 from osv.neo4j_connection import get_neo4j_driver
 
-# from osv.download_ecosystem_data import  
-# from neo4j import GraphDatabase
-# import os
-# from datetime import datetime
-# from vulnerability_repository import repository_exists_in_neo4j, update_repository_in_neo4j, create_repository_in_neo4j, VulnerabilityRepository
-# from neo4j_driver import Neo4jDriver
-
-
-#download_and_extract_all_ecosystems()
-#fetch_osv_ids()
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # Vue.js frontend
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
+)
+
 app.include_router(osv_vulnerabilities_router, prefix="/items/osv_vulnerabilities", tags=["OSV_Vulnerabilities"])
 
 
