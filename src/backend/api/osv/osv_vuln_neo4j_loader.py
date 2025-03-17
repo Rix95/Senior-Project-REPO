@@ -11,7 +11,7 @@ import aiohttp
 import asyncio
 import time
 import random
-from neo4j_connection import get_neo4j_driver
+from osv.neo4j_connection import get_neo4j_driver
 from concurrent.futures import ThreadPoolExecutor
 
 async def fetch_vulnerability_data(vuln_id, session, semaphore):
@@ -396,7 +396,9 @@ async def main():
 
     # Process in chunks with progress tracking
     driver = get_neo4j_driver()
+    print("first flag")
     if driver:
+        print("second flag")
         # Check if APOC is installed using a query that works across versions
         with driver.session() as session:
             try:
@@ -428,7 +430,7 @@ async def main():
         # Create indexes to optimize database performance
         create_indexes(driver)
 
-        vuln_ids = load_vulnerability_ids("all_vulnerability_ids.json")
+        vuln_ids = load_vulnerability_ids("osv/all_vulnerability_ids.json")
         print(f"Loaded {len(vuln_ids)} vulnerability IDs for processing")
 
         # Remove obsolete vulnerabilities
@@ -471,5 +473,8 @@ async def main():
     else:
         print("Failed to connect to Neo4j database")
 
+async def load_osv():
+    main()
+    
 if __name__ == "__main__":
     asyncio.run(main())
