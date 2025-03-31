@@ -7,6 +7,7 @@ from osv.fetch_osv_ids import extract_vulnerability_ids
 from osv.osv_vuln_neo4j_loader import main as load_osv
 from osv.neo4j_connection import get_neo4j_driver
 from apscheduler.schedulers.background import BackgroundScheduler
+from routers.items.vulnerability_timeline import router as timeline_router
 
 
 app = FastAPI()
@@ -19,7 +20,7 @@ app.add_middleware(
 )
 
 app.include_router(osv_vulnerabilities_router, prefix="/items/osv_vulnerabilities", tags=["OSV_Vulnerabilities"])
-
+app.include_router(timeline_router, prefix="/items", tags=["vulnerability_timeline"])
 
 @app.get("/")
 def main():
@@ -41,8 +42,6 @@ async def update_osv_vulnerabilities():
 scheduler = BackgroundScheduler()
 scheduler.add_job(update_osv_vulnerabilities, "interval", weeks=1)
 scheduler.start()
-
-
 
 #Refactor eventually!
 # Query function to count Vulnerability nodes
