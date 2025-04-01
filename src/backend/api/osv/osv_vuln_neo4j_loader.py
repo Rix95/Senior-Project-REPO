@@ -11,8 +11,12 @@ import aiohttp
 import asyncio
 import time
 import random
-from osv.neo4j_connection import get_neo4j_driver
 from concurrent.futures import ThreadPoolExecutor
+from osv.neo4j_connection import get_neo4j_driver
+
+# Import our new Git integration module (which you need to implement)
+import git_integration
+
 
 async def fetch_vulnerability_data(vuln_id, session, semaphore):
     # Fetch vulnerability data from OSV API with retry logic and rate limit handling
@@ -43,6 +47,7 @@ async def fetch_vulnerability_data(vuln_id, session, semaphore):
                 else:
                     return None
 
+
 def check_if_vulnerabilities_exist(driver, vuln_ids):
     # Check which vulnerability IDs already exist in the database
     with driver.session() as session:
@@ -51,19 +56,17 @@ def check_if_vulnerabilities_exist(driver, vuln_ids):
         OPTIONAL MATCH (v:Vulnerability {id: id})
         RETURN id, v IS NOT NULL AS exists
         """, ids=vuln_ids)
-        
         exists_map = {record["id"]: record["exists"] for record in result}
         return exists_map
 
+
 def insert_batch_vulnerabilities_to_neo4j(batch_vuln_data, driver):
-    #Insert a batch of vulnerability data into Neo4j with proper handling for updates vs new inserts
+    # Insert a batch of vulnerability data into Neo4j with proper handling for updates vs new inserts
     try:
         # Extract the IDs
         vuln_ids = [vuln.get('id') for vuln in batch_vuln_data if vuln.get('id')]
-        
         # Check which vulnerabilities already exist
         exists_map = check_if_vulnerabilities_exist(driver, vuln_ids)
-        
         # Split the batch into updates and inserts
         updates = [vuln for vuln in batch_vuln_data if vuln.get('id') and exists_map.get(vuln.get('id'), False)]
         inserts = [vuln for vuln in batch_vuln_data if vuln.get('id') and not exists_map.get(vuln.get('id'), False)]
@@ -86,7 +89,6 @@ def insert_batch_vulnerabilities_to_neo4j(batch_vuln_data, driver):
                 OPTIONAL MATCH (v)-[r]-()
                 DELETE r
                 """, ids=[vuln.get('id') for vuln in updates])
-                
                 # Then process the updates
                 session.write_transaction(insert_batch_vulnerabilities, updates)
         
@@ -101,11 +103,12 @@ def insert_batch_vulnerabilities_to_neo4j(batch_vuln_data, driver):
         print(f"Error processing batch in Neo4j: {e}")
         return 0
 
+
 def insert_batch_vulnerabilities(tx, batch_vuln_data):
-    # Function to insert vulnerability data using the OSV schema
+    # Function to insert vulnerability data using the OSV schema,
+    # updated to create version nodes with GitHub linguist metadata.
     query = """
     UNWIND $batch AS vuln
-
     MERGE (v:Vulnerability {id: vuln.id})
     SET v.summary = coalesce(vuln.summary, "unknown_summary"),
         v.details = coalesce(vuln.details, "unknown_details"),
@@ -115,10 +118,8 @@ def insert_batch_vulnerabilities(tx, batch_vuln_data):
         v.withdrawn = coalesce(vuln.withdrawn, null),
         v.aliases = coalesce(vuln.aliases, []),
         v.related = coalesce(vuln.related, [])
-
-    WITH v, vuln, vuln.severity as severityItems
-
-    UNWIND CASE WHEN severityItems IS NULL THEN [null] ELSE severityItems END AS severityItem
+    WITH v, vuln
+    UNWIND CASE WHEN vuln.severity IS NULL THEN [null] ELSE vuln.severity END AS severityItem
     WITH v, vuln, severityItem
     WHERE severityItem IS NOT NULL
     MERGE (sev:Severity {
@@ -126,37 +127,25 @@ def insert_batch_vulnerabilities(tx, batch_vuln_data):
         score: coalesce(severityItem.score, "unknown_score")
     })
     MERGE (v)-[:HAS_SEVERITY]->(sev)
-
     WITH v, vuln
-
     MERGE (repo:VULN_REPO {name: "OSV"})
     SET repo.last_updated = timestamp()
-
     MERGE (v)-[:BELONGS_TO]->(repo)
-
-    WITH v, vuln.references AS references, vuln.affected AS affectedItems, vuln.credits AS credits, vuln.database_specific AS database_specific
-
+    WITH v, vuln, repo, vuln.references AS references, vuln.affected AS affectedItems, vuln.credits AS credits, vuln.database_specific AS database_specific
     SET v.database_specific = CASE
         WHEN database_specific IS NULL THEN null
         ELSE apoc.convert.toJson(database_specific)
     END
-
-    WITH v, references, affectedItems, credits
-
+    WITH v, repo, references, affectedItems, credits
     UNWIND references AS reference
     MERGE (r:Reference {url: coalesce(reference.url, "unknown_url"), type: coalesce(reference.type, "unknown_reference_type")})
     MERGE (v)-[:HAS_REFERENCE]->(r)
-
-    WITH v, affectedItems, credits
-
+    WITH v, repo, affectedItems, credits
     UNWIND affectedItems AS affectedItem
     MERGE (p:Package {name: coalesce(affectedItem.package.name, "unknown_package_name"),
-                                    ecosystem: coalesce(affectedItem.package.ecosystem, "unknown_ecosystem"),
-                                    purl: coalesce(affectedItem.package.purl, "unknown_purl")})
-
+                        ecosystem: coalesce(affectedItem.package.ecosystem, "unknown_ecosystem"),
+                        purl: coalesce(affectedItem.package.purl, "unknown_purl")})
     MERGE (v)-[:AFFECTS]->(p)
-    SET p.versions = coalesce(affectedItem.versions, [])
-
     SET p.ecosystem_specific = CASE
         WHEN affectedItem.ecosystem_specific IS NULL THEN null
         ELSE apoc.convert.toJson(affectedItem.ecosystem_specific)
@@ -165,53 +154,49 @@ def insert_batch_vulnerabilities(tx, batch_vuln_data):
         WHEN affectedItem.database_specific IS NULL THEN null
         ELSE apoc.convert.toJson(affectedItem.database_specific)
     END
-
-    WITH v, affectedItem, p, credits
+    // Process enriched version metadata as separate nodes:
+    WITH v, repo, affectedItem
+    UNWIND coalesce(affectedItem.versions_metadata, []) AS ver_meta
+    MERGE (ver:VulnerabilityVersion {version: ver_meta.version})
+    SET ver.github_metadata = ver_meta.metadata
+    MERGE (repo)-[:AFFECTS_VERSION]->(ver)
+    WITH v, affectedItem, credits
     UNWIND CASE WHEN affectedItem.severity IS NULL THEN [null] ELSE affectedItem.severity END AS severityItem
-    WITH v, affectedItem, p, credits, severityItem
+    WITH v, affectedItem, credits, severityItem
     WHERE severityItem IS NOT NULL
-
     MERGE (sev:PackageSeverity {
         type: coalesce(severityItem.type, "unknown_severity_type"),
         score: coalesce(severityItem.score, "unknown_score")
     })
     MERGE (p)-[:HAS_SEVERITY]->(sev)
-
-    WITH v, affectedItem, p, credits
-
+    WITH v, affectedItem, credits
     UNWIND affectedItem.ranges AS range
-    WITH v, p, range, credits // Carry p into the range UNWIND
+    WITH v, range, credits, p
     MERGE (ra:Range {type: coalesce(range.type, "unknown_range_type")})
     MERGE (p)-[:HAS_RANGE]->(ra)
-
     SET ra.database_specific = CASE
         WHEN range.database_specific IS NULL THEN null
         ELSE apoc.convert.toJson(range.database_specific)
     END
-
-    WITH v, p, ra, range, credits
-
+    WITH v, range, credits, ra
     UNWIND range.events AS event
     MERGE (e:Event {introduced: coalesce(event.introduced, "unknown_introduced"),
-                                    fixed: coalesce(event.fixed, "unknown_fixed"),
-                                    last_affected: coalesce(event.last_affected, "unknown_last_affected"),
-                                    limit: coalesce(event.limit, "unknown_limit")})
+                      fixed: coalesce(event.fixed, "unknown_fixed"),
+                      last_affected: coalesce(event.last_affected, "unknown_last_affected"),
+                      limit: coalesce(event.limit, "unknown_limit")})
     MERGE (ra)-[:HAS_EVENT]->(e)
-
     WITH v, credits
-
     UNWIND credits AS credit
     MERGE (c:Credit {name: coalesce(credit.name, "unknown_name"),
-                                    type: coalesce(credit.type, "unknown_credit_type")})
+                      type: coalesce(credit.type, "unknown_credit_type")})
     MERGE (v)-[:HAS_CREDIT]->(c)
-
     WITH c, credit.contact AS contacts
-
     UNWIND contacts as contact
     MERGE (co:Contact {contact: coalesce(contact, "unknown_contact")})
     MERGE (c)-[:HAS_CONTACT]->(co)
     """
     tx.run(query, batch=batch_vuln_data)
+
 
 def load_vulnerability_ids(file_path):
     """Load vulnerability IDs from a JSON file."""
@@ -219,10 +204,10 @@ def load_vulnerability_ids(file_path):
         vuln_ids = json.load(file)
     return vuln_ids
 
+
 def create_indexes(driver):
     """Create database indexes to optimize Neo4j performance."""
     with driver.session() as session:
-        # Create indexes for all node types to optimize MERGE operations
         session.run("CREATE INDEX vulnerability_id_index IF NOT EXISTS FOR (v:Vulnerability) ON (v.id)")
         session.run("CREATE INDEX reference_url_index IF NOT EXISTS FOR (r:Reference) ON (r.url)")
         session.run("CREATE INDEX package_composite_index IF NOT EXISTS FOR (p:Package) ON (p.name, p.ecosystem, p.purl)")
@@ -234,6 +219,7 @@ def create_indexes(driver):
         session.run("CREATE INDEX package_severity_composite_index IF NOT EXISTS FOR (s:PackageSeverity) ON (s.type, s.score)")
         print("Created Neo4j indexes for all node types")
 
+
 def cleanup_duplicates(driver):
     # Find and merge duplicated vulnerability nodes
     with driver.session() as session:
@@ -244,13 +230,9 @@ def cleanup_duplicates(driver):
         WHERE size(nodes) > 1
         RETURN id, size(nodes) AS count
         """)
-        
         duplicates = {record["id"]: record["count"] for record in result}
-        
         if duplicates:
             print(f"Found {len(duplicates)} vulnerability IDs with duplicate nodes")
-            
-            # Use APOC to merge duplicate nodes
             for dup_id, count in duplicates.items():
                 try:
                     print(f"Merging {count} duplicates for ID: {dup_id}")
@@ -263,31 +245,23 @@ def cleanup_duplicates(driver):
                     """, id=dup_id)
                 except Exception as e:
                     print(f"Error merging duplicates for {dup_id}: {e}")
-            
             print(f"Merged {len(duplicates)} sets of duplicate nodes")
         else:
             print("No duplicate vulnerability nodes found.")
 
+
 def remove_obsolete_vulnerabilities(driver, current_vuln_ids):
     """Remove vulnerabilities from Neo4j that no longer exist in the current ID list."""
     current_ids_set = set(current_vuln_ids)
-    
     with driver.session() as session:
-        # Get all vulnerability IDs from Neo4j
         result = session.run("MATCH (v:Vulnerability) RETURN v.id as id")
         neo4j_ids = [record["id"] for record in result]
-        
-        # Find IDs that exist in Neo4j but not in the current ID list
         to_remove = [vid for vid in neo4j_ids if vid not in current_ids_set]
-        
         if to_remove:
             print(f"Found {len(to_remove)} obsolete vulnerabilities to remove from Neo4j")
-            
-            # Delete in smaller batches to avoid transaction timeouts
             batch_size = 500
             for i in range(0, len(to_remove), batch_size):
                 batch = to_remove[i:i+batch_size]
-                # Delete these vulnerabilities and their relationships
                 session.run("""
                 UNWIND $ids AS id
                 MATCH (v:Vulnerability {id: id})
@@ -295,16 +269,43 @@ def remove_obsolete_vulnerabilities(driver, current_vuln_ids):
                 DELETE r, v
                 """, ids=batch)
                 print(f"Removed batch of {len(batch)} obsolete vulnerabilities")
-            
             print(f"Successfully removed {len(to_remove)} obsolete vulnerabilities")
         else:
             print("No obsolete vulnerabilities found")
-            
     return len(to_remove) if to_remove else 0
 
+
+def enrich_vulnerability_data(batch_data):
+    """
+    For each vulnerability, iterate over affected packages.
+    For each affected package that contains a list of versions and a repository URL,
+    use the Git integration to switch to the specified revision and fetch GitHub linguist metadata.
+    Then attach this metadata to a new key 'versions_metadata'.
+    """
+    for vuln in batch_data:
+        for affected in vuln.get("affected", []):
+            versions = affected.get("versions", [])
+            repo_url = affected.get("repo_url")  # Expect the repo URL to be provided in the data
+            versions_metadata = []
+            if repo_url and versions:
+                for version in versions:
+                    try:
+                        repo_path, temp_dir = git_integration.git_switch_revision(repo_url, version)
+                        metadata = git_integration.get_github_linguist_metadata(repo_path)
+                        versions_metadata.append({"version": version, "metadata": metadata})
+                        temp_dir.cleanup()  # Clean up temporary folder
+                    except Exception as e:
+                        print(f"Error processing version '{version}' for repo {repo_url}: {e}")
+            # Attach enriched metadata to the affected package
+            affected["versions_metadata"] = versions_metadata
+    return batch_data
+
+
 def neo4j_worker(batch_data, driver):
-    # Handle Neo4j insertion in a separate thread
-    return insert_batch_vulnerabilities_to_neo4j(batch_data, driver)
+    # Enrich vulnerability data before processing Neo4j insertion
+    enriched_batch = enrich_vulnerability_data(batch_data)
+    return insert_batch_vulnerabilities_to_neo4j(enriched_batch, driver)
+
 
 async def process_in_batches(vuln_ids, batch_size, driver, max_concurrent_batches):
     # Process vulnerability data in batches with concurrency
@@ -312,97 +313,67 @@ async def process_in_batches(vuln_ids, batch_size, driver, max_concurrent_batche
     total_vulnerabilities = len(vuln_ids)
     processed_count = 0
     start_total = time.time()
-
-    # Create a thread pool for Neo4j operations
     thread_pool = ThreadPoolExecutor(max_workers=max_concurrent_batches)
     neo4j_futures = []
-
-    # Check for duplicates periodically
     duplicate_check_interval = 1000
-
-    # Split into chunks for progress reporting
     chunk_size = 1000
     for chunk_start in range(0, total_vulnerabilities, chunk_size):
         chunk_end = min(chunk_start + chunk_size, total_vulnerabilities)
         chunk_ids = vuln_ids[chunk_start:chunk_end]
-
-        # Process the chunk in batches
         async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=0)) as session:
             for i in range(0, len(chunk_ids), batch_size):
                 batch_ids = chunk_ids[i:i + batch_size]
                 batch_start_time = time.time()
-
-                # Fetch all vulnerability data concurrently
                 tasks = [fetch_vulnerability_data(vuln_id, session, semaphore) for vuln_id in batch_ids]
                 results = await asyncio.gather(*tasks)
                 batch_vuln_data = [vuln_data for vuln_data in results if vuln_data]
-
                 if batch_vuln_data:
-                    # Submit Neo4j processing to thread pool
                     future = thread_pool.submit(neo4j_worker, batch_vuln_data, driver)
                     neo4j_futures.append(future)
-
-                    # Limit number of concurrent Neo4j operations
                     while len([f for f in neo4j_futures if not f.done()]) >= max_concurrent_batches:
                         await asyncio.sleep(0.1)
-
-                    # Check for completed futures
                     for future in [f for f in neo4j_futures if f.done()]:
                         try:
                             processed_count += future.result()
                             neo4j_futures.remove(future)
                         except Exception as e:
                             print(f"Error in Neo4j worker: {e}")
-
                 batch_time = time.time() - batch_start_time
                 print(f"Batch of {len(batch_vuln_data)} processed in {batch_time:.2f}s. " +
                       f"Progress: {processed_count}/{total_vulnerabilities} " +
                       f"({(processed_count/total_vulnerabilities*100):.2f}%)")
-                
-                # Check for duplicates periodically
                 if processed_count % duplicate_check_interval == 0 and processed_count > 0:
                     print(f"Periodic duplicate check at {processed_count} vulnerabilities...")
                     cleanup_duplicates(driver)
-
-        # After each chunk, report overall progress
         elapsed = time.time() - start_total
-        if chunk_end > 0:  # Prevent division by zero
+        if chunk_end > 0:
             remaining = (elapsed / chunk_end) * (total_vulnerabilities - chunk_end)
             print(f"Completed chunk {chunk_start//chunk_size + 1}/{(total_vulnerabilities + chunk_size - 1)//chunk_size}. " +
                   f"Elapsed: {elapsed/60:.1f}m, Estimated remaining: {remaining/60:.1f}m")
-
-    # Wait for remaining Neo4j operations to complete
     for future in neo4j_futures:
         try:
             processed_count += future.result()
         except Exception as e:
             print(f"Error in Neo4j worker: {e}")
-
     thread_pool.shutdown()
-
-    # Final duplicate check
     print("Performing final duplicate check...")
     cleanup_duplicates(driver)
-
     total_time = time.time() - start_total
     print(f"Total processing time: {total_time/60:.2f} minutes")
     print(f"Average processing speed: {total_vulnerabilities/total_time:.2f} vulnerabilities/second")
 
+
 async def main():
     # Main function to coordinate the entire ETL process
-    # Configuration parameters
     batch_size = 50
     max_concurrent_neo4j_batches = 5  # Control number of concurrent Neo4j transactions
-
-    # Process in chunks with progress tracking
     driver = get_neo4j_driver()
     print("first flag")
     if driver:
         print("second flag")
-        # Check if APOC is installed using a query that works across versions
         with driver.session() as session:
             try:
-                result = session.run("CALL apoc.help('apoc.convert.toJson')")  # check if a apoc function exists.
+                result = session.run("CALL apoc.help('apoc.convert.toJson')")
                 if not result.peek():
                     print("ERROR: APOC extension is not installed in Neo4j. Please install APOC before running this script.")
                     print("Installation instructions: https://neo4j.com/labs/apoc/4.4/installation/")
@@ -412,8 +383,6 @@ async def main():
                 print("ERROR: APOC extension is not installed in Neo4j. Please install APOC before running this script.")
                 print("Installation instructions: https://neo4j.com/labs/apoc/4.4/installation/")
                 return
-
-        # Clean up existing vulnerabilities with '1.6.0' as ID
         with driver.session() as session:
             try:
                 result = session.run("MATCH (v:Vulnerability {id: '1.6.0'}) DETACH DELETE v RETURN count(*) as count")
@@ -422,21 +391,13 @@ async def main():
                     print(f"Cleaned up {deleted_count} vulnerabilities with incorrect ID '1.6.0'")
             except Exception as e:
                 print(f"Error cleaning up incorrect vulnerabilities: {e}")
-
-        # Clean up any duplicate vulnerability nodes
         print("Running initial duplicate cleanup...")
         cleanup_duplicates(driver)
-
-        # Create indexes to optimize database performance
         create_indexes(driver)
-
         vuln_ids = load_vulnerability_ids("osv/all_vulnerability_ids.json")
         print(f"Loaded {len(vuln_ids)} vulnerability IDs for processing")
-
-        # Remove obsolete vulnerabilities
         removed_count = remove_obsolete_vulnerabilities(driver, current_vuln_ids=vuln_ids)
         print(f"Removed {removed_count} obsolete vulnerabilities from Neo4j")
-
         checkpoint_file = "checkpoint.json"
         start_index = 0
         try:
@@ -448,22 +409,18 @@ async def main():
                     vuln_ids = vuln_ids[start_index:]
         except FileNotFoundError:
             print("No checkpoint found, starting from the beginning")
-
         try:
             await process_in_batches(vuln_ids, batch_size, driver, max_concurrent_neo4j_batches)
-            # Save final checkpoint upon successful completion
             with open(checkpoint_file, 'w') as f:
                 json.dump({"last_processed_index": len(vuln_ids) + start_index, "completed": True}, f)
             print("Processing completed successfully")
         except KeyboardInterrupt:
-            # Save checkpoint on interrupt
             with open(checkpoint_file, 'w') as f:
                 checkpoint_index = start_index + (len(load_vulnerability_ids("all_vulnerability_ids.json")) - len(vuln_ids))
                 json.dump({"last_processed_index": checkpoint_index, "completed": False}, f)
             print(f"Process interrupted, checkpoint saved at index {checkpoint_index}.")
         except Exception as e:
             print(f"Unexpected error: {e}")
-            # Save checkpoint on error
             with open(checkpoint_file, 'w') as f:
                 checkpoint_index = start_index + (len(load_vulnerability_ids("all_vulnerability_ids.json")) - len(vuln_ids))
                 json.dump({"last_processed_index": checkpoint_index, "completed": False, "error": str(e)}, f)
@@ -473,8 +430,9 @@ async def main():
     else:
         print("Failed to connect to Neo4j database")
 
+
 async def load_osv():
-    main()
+    await main()
     
 if __name__ == "__main__":
     asyncio.run(main())
