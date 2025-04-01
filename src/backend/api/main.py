@@ -8,6 +8,7 @@ from osv.osv_vuln_neo4j_loader import main as load_osv
 from osv.neo4j_connection import get_neo4j_driver
 from apscheduler.schedulers.background import BackgroundScheduler
 from routers.items.vulnerability_timeline import router as timeline_router
+from osv.vulnerability_repo_mapper import VulnerabilityRepoMapper
 
 
 app = FastAPI()
@@ -28,14 +29,17 @@ def main():
 
 @app.post("/update_osv_vulnerabilities")
 async def update_osv_vulnerabilities():
-    #1 download vulnerabilities
+    # Download and load vulnerabilities
     download_and_extract_all_ecosystems()
-    #2 move to id single file json
     extract_vulnerability_ids()
-    #3 load vulnerabilities
     await load_osv()
-    #query = """
-    #QUERY TBDsu
+    
+    # Compute and store minimal affected versions
+    mapper = VulnerabilityRepoMapper()
+    if mapper.connect():
+        mapper.build_minimal_hitting_sets_for_repo("OSV")
+        mapper.close()
+    
     return {"message": "OSV vulnerabilities updated successfully"}
 
 #Run script every week
