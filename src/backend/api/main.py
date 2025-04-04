@@ -1,4 +1,3 @@
-
 from routers.items import router as osv_vulnerabilities_router
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,17 +36,36 @@ async def update_osv_vulnerabilities():
     # Compute and store minimal affected versions
     mapper = VulnerabilityRepoMapper()
     if mapper.connect():
-        mapper.build_minimal_hitting_sets_for_repo("OSV")
-        mapper.close()
+        try:
+            mapper.build_minimal_hitting_sets_for_repo("OSV")
+        except Exception as e:
+            print(f"Error building minimal hitting sets: {e}")
+        finally:
+            mapper.close()
     
     return {"message": "OSV vulnerabilities updated successfully"}
 
-#Run script every week
+# Add a new endpoint to manually trigger the minimal hitting set computation
+@app.post("/compute_minimal_hitting_sets")
+async def compute_minimal_hitting_sets():
+    mapper = VulnerabilityRepoMapper()
+    try:
+        if mapper.connect():
+            result = mapper.build_minimal_hitting_sets_for_repo("OSV")
+            return result
+        else:
+            raise HTTPException(status_code=500, detail="Failed to connect to Neo4j database")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+    finally:
+        mapper.close()
+
+# Run script every week
 scheduler = BackgroundScheduler()
 scheduler.add_job(update_osv_vulnerabilities, "interval", weeks=1)
 scheduler.start()
 
-#Refactor eventually!
+# Refactor eventually!
 # Query function to count Vulnerability nodes
 def count_vulnerability_nodes(driver):
     with driver.session() as session:
@@ -77,6 +95,34 @@ async def fetch_last_updated(driver=Depends(get_neo4j_driver)):
     if last_updated is None:
         return {"error": "Repository not found"}
     return {"last_updated": last_updated}
+
+# New endpoint to get the minimal versions for a repository
+@app.get("/minimal_versions/{repo_name}")
+async def get_minimal_versions(repo_name: str, driver=Depends(get_neo4j_driver)):
+    try:
+        with driver.session() as session:
+            result = session.run(
+                "MATCH (repo:VULN_REPO {name: $repo_name}) "
+                "RETURN repo.minimal_versions AS minimal_versions, "
+                "repo.minimal_versions_count AS count, "
+                "repo.minimal_versions_updated AS updated",
+                repo_name=repo_name
+            )
+            record = result.single()
+            
+            if not record or not record["minimal_versions"]:
+                return {
+                    "message": f"No minimal versions found for {repo_name}. Try running /compute_minimal_hitting_sets first."
+                }
+                
+            return {
+                "repository": repo_name,
+                "minimal_versions": record["minimal_versions"],
+                "count": record["count"],
+                "last_updated": record["updated"]
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving minimal versions: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
