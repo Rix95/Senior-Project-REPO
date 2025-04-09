@@ -37,7 +37,7 @@ async def update_osv_vulnerabilities():
     mapper = VulnerabilityRepoMapper()
     if mapper.connect():
         try:
-            mapper.build_minimal_hitting_sets_for_repo("OSV")
+            mapper.build_minimal_hitting_sets_per_package("OSV")
         except Exception as e:
             print(f"Error building minimal hitting sets: {e}")
         finally:
@@ -51,7 +51,7 @@ async def compute_minimal_hitting_sets():
     mapper = VulnerabilityRepoMapper()
     try:
         if mapper.connect():
-            result = mapper.build_minimal_hitting_sets_for_repo("OSV")
+            result = mapper.build_minimal_hitting_sets_per_package("OSV")
             return result
         else:
             raise HTTPException(status_code=500, detail="Failed to connect to Neo4j database")
