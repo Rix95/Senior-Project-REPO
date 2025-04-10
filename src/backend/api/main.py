@@ -8,7 +8,7 @@ from osv.neo4j_connection import get_neo4j_driver
 from apscheduler.schedulers.background import BackgroundScheduler
 from routers.items.vulnerability_timeline import router as timeline_router
 from osv.vulnerability_repo_mapper import VulnerabilityRepoMapper
-
+from osv.vulnerability_repo_mapper import main as repo_mapper
 
 app = FastAPI()
 app.add_middleware(
@@ -44,6 +44,12 @@ async def update_osv_vulnerabilities():
             mapper.close()
     
     return {"message": "OSV vulnerabilities updated successfully"}
+
+@app.post("/map_vulnerabilities")
+async def map_vulnerabilities():
+    repo_mapper()
+    
+    return {"message": "map returned"}
 
 # Add a new endpoint to manually trigger the minimal hitting set computation
 @app.post("/compute_minimal_hitting_sets")
