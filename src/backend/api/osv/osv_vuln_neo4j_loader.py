@@ -129,7 +129,7 @@ def insert_batch_vulnerabilities(tx, batch_vuln_data):
     MERGE (v)-[:HAS_SEVERITY]->(sev)
     WITH v, vuln
     MERGE (repo:VULN_REPO {name: "OSV"})
-    SET repo.last_updated = timestamp()
+    SET repo.last_updated = timestamp(), repo.minimal_versions = coalesce(repo.minimal_versions, [])
     MERGE (v)-[:BELONGS_TO]->(repo)
     WITH v, vuln, repo, vuln.references AS references, vuln.affected AS affectedItems, vuln.credits AS credits, vuln.database_specific AS database_specific
     SET v.database_specific = CASE

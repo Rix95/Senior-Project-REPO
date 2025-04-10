@@ -1,0 +1,398 @@
+[
+    {
+        "Id": "c0f742ba12e93ecf8c06197fc63f441b8f0e8e203519137c5032402bbe7cc5a0",
+        "Created": "2025-04-07T00:10:52.366569799Z",
+        "Path": "tini",
+        "Args": [
+            "-g",
+            "--",
+            "/startup/docker-entrypoint.sh",
+            "neo4j"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 2396769,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2025-04-08T01:35:48.71864838Z",
+            "FinishedAt": "2025-04-08T01:35:48.699375336Z",
+            "Health": {
+                "Status": "starting",
+                "FailingStreak": 0,
+                "Log": [
+                    {
+                        "Start": "2025-04-08T01:35:41.467161368Z",
+                        "End": "2025-04-08T01:35:41.576596803Z",
+                        "ExitCode": 4,
+                        "Output": "failed: Connection refused.\nfailed: Connection refused.\n"
+                    },
+                    {
+                        "Start": "2025-04-08T01:35:47.674084653Z",
+                        "End": "2025-04-08T01:35:47.774598701Z",
+                        "ExitCode": 4,
+                        "Output": "failed: Connection refused.\nfailed: Connection refused.\n"
+                    },
+                    {
+                        "Start": "2025-04-08T01:35:54.019886187Z",
+                        "End": "2025-04-08T01:35:54.113514196Z",
+                        "ExitCode": 4,
+                        "Output": "failed: Connection refused.\nfailed: Connection refused.\n"
+                    },
+                    {
+                        "Start": "2025-04-08T01:35:59.11510201Z",
+                        "End": "2025-04-08T01:35:59.198474817Z",
+                        "ExitCode": 4,
+                        "Output": "failed: Connection refused.\nfailed: Connection refused.\n"
+                    },
+                    {
+                        "Start": "2025-04-08T01:36:04.199700309Z",
+                        "End": "2025-04-08T01:36:04.284951936Z",
+                        "ExitCode": 4,
+                        "Output": "failed: Connection refused.\nfailed: Connection refused.\n"
+                    }
+                ]
+            }
+        },
+        "Image": "sha256:d90fdf60dd2cdaa8631b8f2fe6906033728268064e21b9973ac341c2dce9bdd2",
+        "ResolvConfPath": "/mnt/disk-1/docker/containers/c0f742ba12e93ecf8c06197fc63f441b8f0e8e203519137c5032402bbe7cc5a0/resolv.conf",
+        "HostnamePath": "/mnt/disk-1/docker/containers/c0f742ba12e93ecf8c06197fc63f441b8f0e8e203519137c5032402bbe7cc5a0/hostname",
+        "HostsPath": "/mnt/disk-1/docker/containers/c0f742ba12e93ecf8c06197fc63f441b8f0e8e203519137c5032402bbe7cc5a0/hosts",
+        "LogPath": "/mnt/disk-1/docker/containers/c0f742ba12e93ecf8c06197fc63f441b8f0e8e203519137c5032402bbe7cc5a0/c0f742ba12e93ecf8c06197fc63f441b8f0e8e203519137c5032402bbe7cc5a0-json.log",
+        "Name": "/neo4j",
+        "RestartCount": 2,
+        "Driver": "overlay2",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "senior-project-repo_app-network",
+            "PortBindings": {
+                "7474/tcp": [
+                    {
+                        "HostIp": "",
+                        "HostPort": "7474"
+                    }
+                ],
+                "7687/tcp": [
+                    {
+                        "HostIp": "",
+                        "HostPort": "7687"
+                    }
+                ]
+            },
+            "RestartPolicy": {
+                "Name": "unless-stopped",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": null,
+            "DnsOptions": null,
+            "DnsSearch": null,
+            "ExtraHosts": [],
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": null,
+            "BlkioDeviceReadBps": null,
+            "BlkioDeviceWriteBps": null,
+            "BlkioDeviceReadIOps": null,
+            "BlkioDeviceWriteIOps": null,
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": null,
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": null,
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "Mounts": [
+                {
+                    "Type": "volume",
+                    "Source": "senior-project-repo_neo4j_plugins",
+                    "Target": "/plugins",
+                    "VolumeOptions": {}
+                },
+                {
+                    "Type": "volume",
+                    "Source": "senior-project-repo_neo4j_data",
+                    "Target": "/data",
+                    "VolumeOptions": {}
+                },
+                {
+                    "Type": "volume",
+                    "Source": "senior-project-repo_neo4j_logs",
+                    "Target": "/logs",
+                    "VolumeOptions": {}
+                },
+                {
+                    "Type": "volume",
+                    "Source": "senior-project-repo_neo4j_import",
+                    "Target": "/import",
+                    "VolumeOptions": {}
+                }
+            ],
+            "MaskedPaths": [
+                "/proc/asound",
+                "/proc/acpi",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/sys/firmware",
+                "/sys/devices/virtual/powercap"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "GraphDriver": {
+            "Data": {
+                "ID": "c0f742ba12e93ecf8c06197fc63f441b8f0e8e203519137c5032402bbe7cc5a0",
+                "LowerDir": "/mnt/disk-1/docker/overlay2/6f383834beda829b634847a3c0b33b07bf72508b82d16a627e10997837a92ecd-init/diff:/mnt/disk-1/docker/overlay2/dae57b126b4cbb2ea737046307711a8b7fd6fa5be93b2b004046d1a629aa9ee8/diff:/mnt/disk-1/docker/overlay2/1ba31a014d4e78926b8a035004e767fdfeae84f93a718c555f99a2c9bad0fbed/diff:/mnt/disk-1/docker/overlay2/362dd806092ad543830f6dc2a4441a68cf85f52b6aefc75075e33a600d36372e/diff:/mnt/disk-1/docker/overlay2/37c269b9f20ab90ac2250f5ac15120f787d2a79802e3baca4d5af1252a2c3838/diff:/mnt/disk-1/docker/overlay2/74be7f5713f3bcedf9214358e312c1aa10ff67a9fa07be0afecfea84c7fcca6a/diff",
+                "MergedDir": "/mnt/disk-1/docker/overlay2/6f383834beda829b634847a3c0b33b07bf72508b82d16a627e10997837a92ecd/merged",
+                "UpperDir": "/mnt/disk-1/docker/overlay2/6f383834beda829b634847a3c0b33b07bf72508b82d16a627e10997837a92ecd/diff",
+                "WorkDir": "/mnt/disk-1/docker/overlay2/6f383834beda829b634847a3c0b33b07bf72508b82d16a627e10997837a92ecd/work"
+            },
+            "Name": "overlay2"
+        },
+        "Mounts": [
+            {
+                "Type": "volume",
+                "Name": "senior-project-repo_neo4j_data",
+                "Source": "/mnt/disk-1/docker/volumes/senior-project-repo_neo4j_data/_data",
+                "Destination": "/data",
+                "Driver": "local",
+                "Mode": "z",
+                "RW": true,
+                "Propagation": ""
+            },
+            {
+                "Type": "volume",
+                "Name": "senior-project-repo_neo4j_logs",
+                "Source": "/mnt/disk-1/docker/volumes/senior-project-repo_neo4j_logs/_data",
+                "Destination": "/logs",
+                "Driver": "local",
+                "Mode": "z",
+                "RW": true,
+                "Propagation": ""
+            },
+            {
+                "Type": "volume",
+                "Name": "senior-project-repo_neo4j_import",
+                "Source": "/mnt/disk-1/docker/volumes/senior-project-repo_neo4j_import/_data",
+                "Destination": "/import",
+                "Driver": "local",
+                "Mode": "z",
+                "RW": true,
+                "Propagation": ""
+            },
+            {
+                "Type": "volume",
+                "Name": "senior-project-repo_neo4j_plugins",
+                "Source": "/mnt/disk-1/docker/volumes/senior-project-repo_neo4j_plugins/_data",
+                "Destination": "/plugins",
+                "Driver": "local",
+                "Mode": "z",
+                "RW": true,
+                "Propagation": ""
+            }
+        ],
+        "Config": {
+            "Hostname": "c0f742ba12e9",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": true,
+            "AttachStderr": true,
+            "ExposedPorts": {
+                "7473/tcp": {},
+                "7474/tcp": {},
+                "7687/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "NEO4J_apoc_import_file_enabled=true",
+                "NEO4J_apoc_import_file_use__neo4j__config=true",
+                "NEO4J_dbms_security_procedures_unrestricted=apoc.*,algo.*",
+                "NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687",
+                "NEO4J_PLUGINS=[\"apoc\"]",
+                "NEO4J_AUTH=neo4j/seniorprojectdb",
+                "NEO4J_apoc_export_file_enabled=true",
+                "PATH=/var/lib/neo4j/bin:/opt/java/openjdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "JAVA_HOME=/opt/java/openjdk",
+                "NEO4J_SHA256=c5b1834ae4493af9c623c7d4d68783de1f87d73adea34cd973d9daa3c2ea056c",
+                "NEO4J_TARBALL=neo4j-community-5.13.0-unix.tar.gz",
+                "NEO4J_EDITION=community",
+                "NEO4J_HOME=/var/lib/neo4j"
+            ],
+            "Cmd": [
+                "neo4j"
+            ],
+            "Healthcheck": {
+                "Test": [
+                    "CMD",
+                    "wget",
+                    "--no-verbose",
+                    "--tries=1",
+                    "--spider",
+                    "http://localhost:7474"
+                ],
+                "Interval": 30000000000,
+                "Timeout": 10000000000,
+                "StartPeriod": 120000000000,
+                "Retries": 5
+            },
+            "Image": "neo4j:5.13.0",
+            "Volumes": {
+                "/data": {},
+                "/logs": {}
+            },
+            "WorkingDir": "/var/lib/neo4j",
+            "Entrypoint": [
+                "tini",
+                "-g",
+                "--",
+                "/startup/docker-entrypoint.sh"
+            ],
+            "OnBuild": null,
+            "Labels": {
+                "com.docker.compose.config-hash": "007b3a42bf5321ed99eb445df616bf5437fe3049cb9ff529f6e3db1b5b74571e",
+                "com.docker.compose.container-number": "1",
+                "com.docker.compose.depends_on": "",
+                "com.docker.compose.image": "sha256:d90fdf60dd2cdaa8631b8f2fe6906033728268064e21b9973ac341c2dce9bdd2",
+                "com.docker.compose.oneoff": "False",
+                "com.docker.compose.project": "senior-project-repo",
+                "com.docker.compose.project.config_files": "/mnt/disk-1/ric_dir/Senior-Project-REPO/docker-compose.yml",
+                "com.docker.compose.project.working_dir": "/mnt/disk-1/ric_dir/Senior-Project-REPO",
+                "com.docker.compose.replace": "7d637fa8664d2e61100b5aebd8ed0479108cea84ea7d8abf24d944c9478f56a9",
+                "com.docker.compose.service": "neo4j",
+                "com.docker.compose.version": "2.33.1"
+            }
+        },
+        "NetworkSettings": {
+            "Bridge": "",
+            "SandboxID": "7a7da105c370925c992a73c03ad57811973edb0b4c64faae441396e6c8b7a6dd",
+            "SandboxKey": "/var/run/docker/netns/7a7da105c370",
+            "Ports": {
+                "7473/tcp": null,
+                "7474/tcp": [
+                    {
+                        "HostIp": "0.0.0.0",
+                        "HostPort": "7474"
+                    },
+                    {
+                        "HostIp": "::",
+                        "HostPort": "7474"
+                    }
+                ],
+                "7687/tcp": [
+                    {
+                        "HostIp": "0.0.0.0",
+                        "HostPort": "7687"
+                    },
+                    {
+                        "HostIp": "::",
+                        "HostPort": "7687"
+                    }
+                ]
+            },
+            "HairpinMode": false,
+            "LinkLocalIPv6Address": "",
+            "LinkLocalIPv6PrefixLen": 0,
+            "SecondaryIPAddresses": null,
+            "SecondaryIPv6Addresses": null,
+            "EndpointID": "",
+            "Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "IPAddress": "",
+            "IPPrefixLen": 0,
+            "IPv6Gateway": "",
+            "MacAddress": "",
+            "Networks": {
+                "senior-project-repo_app-network": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": [
+                        "neo4j",
+                        "neo4j"
+                    ],
+                    "MacAddress": "e6:bf:08:ec:f0:34",
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "618fb5a16d265f2ce6a7908592228a26606a1aa653405bb9e460a94cb0790786",
+                    "EndpointID": "763241dcbd55fe7fc62318cbea61da9d631585c88b68d6c6239a8ced3d4e2b27",
+                    "Gateway": "172.18.0.1",
+                    "IPAddress": "172.18.0.2",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "neo4j",
+                        "c0f742ba12e9"
+                    ]
+                }
+            }
+        }
+    }
+]
