@@ -3,6 +3,7 @@
 import subprocess
 import os
 from tempfile import TemporaryDirectory
+import json
 
 def git_switch_revision(repo_url: str, revision: str):
     """
@@ -22,47 +23,74 @@ def git_switch_revision(repo_url: str, revision: str):
     temp_dir = TemporaryDirectory()
     repo_path = os.path.join(temp_dir.name, "repo")
     try:
-        print(f"[git_integration] Cloning repository from {repo_url} into {repo_path}...")
         subprocess.run(
             ["git", "clone", repo_url, repo_path],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
-        print(f"[git_integration] Successfully cloned repository. Switching to revision '{revision}'...")
         subprocess.run(
             ["git", "-C", repo_path, "switch", revision],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
-        print(f"[git_integration] Successfully switched to revision '{revision}'.")
         return repo_path, temp_dir
+
     except Exception as e:
         temp_dir.cleanup()
         raise Exception(f"Git switch failed: {e}")
 
 def get_github_linguist_metadata(repo_path: str):
     """
-    Retrieve language metadata from the repository.
-    
-    This is a placeholder function. In production, you could integrate with GitHub's Linguist
-    (or another language analysis tool) to retrieve real metadata for the repository.
-    
-    For example, if a command-line tool 'github-linguist' were available, you might run:
-      result = subprocess.run(["github-linguist", repo_path], capture_output=True, text=True)
-      # Process result.stdout to build your metadata dictionary.
-    
-    Returns:
-      dict: A dictionary with keys such as 'dominant_language' and 'language_percentages'.
-    """
-    # For demonstration purposes, we return static metadata.
-    metadata = {
-        "dominant_language": "Python",
-        "language_percentages": {
-            "Python": 80,
-            "JavaScript": 15,
-            "Other": 5
+    Retrieve language metadata from the repository using GitHub Linguist.
+    Returns a dict with:
+        {
+          'dominant_language': <str>,
+          'language_percentages': {
+              <Language1>: <pct_float>,
+              <Language2>: <pct_float>,
+              ...
+          }
         }
-    }
-    return metadata
+    """
+    try:
+        # Use --json for stable, parseable output
+        cmd = ["github-linguist", repo_path, "--json"]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+        data = json.loads(result.stdout)
+        # Example `data`:
+        # {
+        #   "JavaScript": {"size": 489643, "percentage": "99.89"},
+        #   "Makefile":   {"size": 330,    "percentage": "0.07"},
+        #   "Shell":      {"size": 229,    "percentage": "0.05"}
+        # }
+
+        language_percentages = {}
+        for lang_name, info in data.items():
+            # The `percentage` field is a string representing a float
+            pct_str = info.get("percentage", "0.0")
+            try:
+                pct_val = float(pct_str)
+            except ValueError:
+                pct_val = 0.0
+            language_percentages[lang_name] = pct_val
+
+        # Dominant language = highest percentage
+        if language_percentages:
+            dominant_lang = max(language_percentages, key=language_percentages.get)
+        else:
+            dominant_lang = "Unknown"
+
+        return {
+            "dominant_language": dominant_lang,
+            "language_percentages": language_percentages
+        }
+
+    except subprocess.CalledProcessError as e:
+        # If github-linguist fails for any reason, return a default
+        return {
+            "dominant_language": "Unknown",
+            "language_percentages": {}
+        }
