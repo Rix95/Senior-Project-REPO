@@ -1,4 +1,3 @@
-
 from routers.items import router as osv_vulnerabilities_router
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,7 +7,8 @@ from osv.osv_vuln_neo4j_loader import main as load_osv
 from osv.neo4j_connection import get_neo4j_driver
 from apscheduler.schedulers.background import BackgroundScheduler
 from routers.items.vulnerability_timeline import router as timeline_router
-
+from osv.vulnerability_repo_mapper import VulnerabilityRepoMapper
+from osv.vulnerability_repo_mapper import main as repo_mapper
 
 app = FastAPI()
 app.add_middleware(
@@ -28,22 +28,50 @@ def main():
 
 @app.post("/update_osv_vulnerabilities")
 async def update_osv_vulnerabilities():
-    #1 download vulnerabilities
+    # Download and load vulnerabilities
     download_and_extract_all_ecosystems()
-    #2 move to id single file json
     extract_vulnerability_ids()
-    #3 load vulnerabilities
     await load_osv()
-    #query = """
-    #QUERY TBDsu
+    
+    # Compute and store minimal affected versions
+    mapper = VulnerabilityRepoMapper()
+    if mapper.connect():
+        try:
+            mapper.build_minimal_hitting_sets_per_package("OSV")
+        except Exception as e:
+            print(f"Error building minimal hitting sets: {e}")
+        finally:
+            mapper.close()
+    
     return {"message": "OSV vulnerabilities updated successfully"}
 
-#Run script every week
+@app.post("/map_vulnerabilities")
+async def map_vulnerabilities():
+    repo_mapper()
+    
+    return {"message": "map returned"}
+
+# Add a new endpoint to manually trigger the minimal hitting set computation
+@app.post("/compute_minimal_hitting_sets")
+async def compute_minimal_hitting_sets():
+    mapper = VulnerabilityRepoMapper()
+    try:
+        if mapper.connect():
+            result = mapper.build_minimal_hitting_sets_per_package("OSV")
+            return result
+        else:
+            raise HTTPException(status_code=500, detail="Failed to connect to Neo4j database")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+    finally:
+        mapper.close()
+
+# Run script every week
 scheduler = BackgroundScheduler()
 scheduler.add_job(update_osv_vulnerabilities, "interval", weeks=1)
 scheduler.start()
 
-#Refactor eventually!
+# Refactor eventually!
 # Query function to count Vulnerability nodes
 def count_vulnerability_nodes(driver):
     with driver.session() as session:
@@ -73,6 +101,34 @@ async def fetch_last_updated(driver=Depends(get_neo4j_driver)):
     if last_updated is None:
         return {"error": "Repository not found"}
     return {"last_updated": last_updated}
+
+# New endpoint to get the minimal versions for a repository
+@app.get("/minimal_versions/{repo_name}")
+async def get_minimal_versions(repo_name: str, driver=Depends(get_neo4j_driver)):
+    try:
+        with driver.session() as session:
+            result = session.run(
+                "MATCH (repo:VULN_REPO {name: $repo_name}) "
+                "RETURN repo.minimal_versions AS minimal_versions, "
+                "repo.minimal_versions_count AS count, "
+                "repo.minimal_versions_updated AS updated",
+                repo_name=repo_name
+            )
+            record = result.single()
+            
+            if not record or not record["minimal_versions"]:
+                return {
+                    "message": f"No minimal versions found for {repo_name}. Try running /compute_minimal_hitting_sets first."
+                }
+                
+            return {
+                "repository": repo_name,
+                "minimal_versions": record["minimal_versions"],
+                "count": record["count"],
+                "last_updated": record["updated"]
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving minimal versions: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

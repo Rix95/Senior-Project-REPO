@@ -38,20 +38,27 @@ services:
     healthcheck:
       test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7474" ]
       interval: 30s
-      timeout: 10s
-      retries: 5
+      timeout: 30s
+      retries: 3
       start_period: 120s # Give Neo4j more time to start
     environment:
-      - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
-      - NEO4J_apoc_export_file_enabled=true
-      - NEO4J_apoc_import_file_enabled=true
-      - NEO4J_apoc_import_file_use__neo4j__config=true
-      - NEO4J_dbms_security_procedures_unrestricted=apoc.*,algo.*
-      - NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
-      - NEO4J_PLUGINS=["apoc"] # Add this line to install APOC
+       - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
+       - NEO4J_dbms_memory_heap_max__size=8G
+       - NEO4J_dbms_memory_pagecache_size=4G
+       - NEO4J_dbms_jvm_additional=-XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError
+       - NEO4J_dbms_transaction_timeout=30m
+       - NEO4J_dbms_checkpoint_interval_time=5m
+       - NEO4J_apoc_export_file_enabled=true
+       - NEO4J_apoc_import_file_enabled=true
+       - NEO4J_apoc_import_file_use__neo4j__config=true
+       - NEO4J_dbms_security_procedures_unrestricted=apoc.*,algo.*
+       - NEO4J_dbms_connector_bolt_listen__address=0.0.0.0:7687
+       - NEO4J_PLUGINS=["apoc"]
     networks:
       - app-network
     restart: unless-stopped
+    mem_limit: 12G
+    cpus: 4
 
   frontend:
     build:
