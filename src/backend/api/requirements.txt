@@ -7,3 +7,4 @@ aiohttp>=3.9.3
 uvicorn>=0.27.1
 apscheduler>=3.2.0,<4.0.0
 ortools
+GitPython>=3.1.43

@@ -7,6 +7,7 @@ from osv.osv_vuln_neo4j_loader import main as load_osv
 from osv.neo4j_connection import get_neo4j_driver
 from apscheduler.schedulers.background import BackgroundScheduler
 from routers.items.vulnerability_timeline import router as timeline_router
+from builders.cve_affected_versions_builder import CVEAffectedVersionsBuilder
 from osv.vulnerability_repo_mapper import VulnerabilityRepoMapper
 from osv.vulnerability_repo_mapper import main as repo_mapper
 
@@ -42,7 +43,11 @@ async def update_osv_vulnerabilities():
             print(f"Error building minimal hitting sets: {e}")
         finally:
             mapper.close()
-    
+            
+            # --- Build & store repo‑language snapshots --------------------------
+            builder = CVEAffectedVersionsBuilder()   # uses Neo4j creds from .env
+            builder.run()
+     
     return {"message": "OSV vulnerabilities updated successfully"}
 
 @app.post("/map_vulnerabilities")
