@@ -102,6 +102,28 @@ async def fetch_last_updated(driver=Depends(get_neo4j_driver)):
         return {"error": "Repository not found"}
     return {"last_updated": last_updated}
 
+###
+# Query function to query packages by name
+def search_packages_by_name(name: str) -> List[dict]:
+    query = """
+    MATCH (p:Package)
+    WHERE toLower(p.name) CONTAINS toLower($user_input)
+    RETURN p.name AS packageName, p.ecosystem AS ecosystem
+    ORDER BY packageName, ecosystem
+    """
+    with driver.session() as session:
+        result = session.run(query, name=name)
+        return [record.data() for record in result
+
+# FastAPI endpoint to get packages by name, this returns package and ecosystem.
+@app.get("/search_by_name")
+async def search_package_by_name(name: str = Query(..., description="Package name to search for")):
+    results = search_packages_by_name(name)
+    return {"results": results}
+
+
+###
+
 # New endpoint to get the minimal versions for a repository
 @app.get("/minimal_versions/{repo_name}")
 async def get_minimal_versions(repo_name: str, driver=Depends(get_neo4j_driver)):
