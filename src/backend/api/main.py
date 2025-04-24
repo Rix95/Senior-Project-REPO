@@ -7,8 +7,8 @@ from osv.osv_vuln_neo4j_loader import main as load_osv
 from osv.neo4j_connection import get_neo4j_driver
 from apscheduler.schedulers.background import BackgroundScheduler
 from routers.items.vulnerability_timeline import router as timeline_router
-from builders.cve_affected_versions_builder import CVEAffectedVersionsBuilder
 from osv.vulnerability_repo_mapper import VulnerabilityRepoMapper
+from version_builder.builder import VersionBuilder  
 from osv.vulnerability_repo_mapper import main as repo_mapper
 
 app = FastAPI()
@@ -29,7 +29,7 @@ def main():
 
 @app.post("/update_osv_vulnerabilities")
 async def update_osv_vulnerabilities():
-    # Download and load vulnerabilities
+    # Download and load vulnerabilities (raw data)
     download_and_extract_all_ecosystems()
     extract_vulnerability_ids()
     await load_osv()
@@ -44,11 +44,15 @@ async def update_osv_vulnerabilities():
         finally:
             mapper.close()
             
-            # --- Build & store repo‑language snapshots --------------------------
-            builder = CVEAffectedVersionsBuilder()   # uses Neo4j creds from .env
-            builder.run()
+        # 3. build revision metadata
+        try:
+            latest_json = output_file or mapper.package_cve_versions_last
+            vb = VersionBuilder(latest_json, workers=4)
+            vb.run()
+        except Exception as e:
+            print(f"Version builder failed: {e}")
      
-    return {"message": "OSV vulnerabilities updated successfully"}
+    return {"message": "OSV vulnerabilities & revision metadata updated successfully"}
 
 @app.post("/map_vulnerabilities")
 async def map_vulnerabilities():

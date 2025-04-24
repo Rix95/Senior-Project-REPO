@@ -392,7 +392,7 @@ async def main():
     # Main function to coordinate the entire ETL process
     # Configuration parameters
     batch_size = 50
-    max_concurrent_neo4j_batches = 5  # Control number of concurrent Neo4j transactions
+    max_concurrent_neo4j_batches = 2  # Control number of concurrent Neo4j transactions
 
     # Process in chunks with progress tracking
     driver = get_neo4j_driver()
