@@ -1,5 +1,5 @@
 from routers.items import router as osv_vulnerabilities_router
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from osv.download_ecosystem_data import download_and_extract_all_ecosystems
 from osv.fetch_osv_ids import extract_vulnerability_ids
@@ -10,6 +10,7 @@ from routers.items.vulnerability_timeline import router as timeline_router
 from osv.vulnerability_repo_mapper import VulnerabilityRepoMapper
 from version_builder.builder import VersionBuilder  
 from osv.vulnerability_repo_mapper import main as repo_mapper
+from typing import List
 
 app = FastAPI()
 app.add_middleware(
@@ -110,6 +111,28 @@ async def fetch_last_updated(driver=Depends(get_neo4j_driver)):
     if last_updated is None:
         return {"error": "Repository not found"}
     return {"last_updated": last_updated}
+
+###
+# Query function to query packages by name
+def search_packages_by_name(name: str, driver) -> List[dict]:
+    query = """
+    MATCH (p:Package)
+    WHERE toLower(p.name) CONTAINS toLower($name)
+    RETURN p.name AS packageName, p.ecosystem AS ecosystem
+    ORDER BY packageName, ecosystem
+    """
+    with driver.session() as session:
+        result = session.run(query, name=name)
+        return [record.data() for record in result]
+
+# FastAPI endpoint to get packages by name, this returns package and ecosystem.
+@app.get("/search_by_name")
+async def search_package_by_name(name: str = Query(..., description="Package name to search for"), driver=Depends(get_neo4j_driver)):
+    results = search_packages_by_name(name, driver)
+    return {"results": results}
+
+
+###
 
 # New endpoint to get the minimal versions for a repository
 @app.get("/minimal_versions/{repo_name}")
