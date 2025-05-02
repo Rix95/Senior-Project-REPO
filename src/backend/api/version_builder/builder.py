@@ -30,6 +30,10 @@ class VersionBuilder:
         package_map = self._load_json()
         tasks = self._prepare_tasks(package_map)
         self._process_tasks(tasks)
+        log.info("Revision pipeline finished — %d repos analysed, %d skipped",
+         sum(fut.done() and not fut.exception() for fut in futures),
+         sum(fut.done() and fut.exception()  for fut in futures))
+
 
     # ---------- helpers ------------------------------------------------------
     def _load_json(self) -> Dict:
