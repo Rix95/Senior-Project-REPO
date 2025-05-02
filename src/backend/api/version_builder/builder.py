@@ -8,6 +8,11 @@ from config import NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD
 from packageurl import PackageURL
 
 log = logging.getLogger(__name__)
+noisy_log = logging.getLogger(__name__ + ".repos")
+noisy_log.propagate = False
+noisy_log.setLevel(logging.WARNING)
+logging.basicConfig(level=os.getenv("PYTHONLOGLEVEL", "INFO"))
+
 LINGUIST_CMD = os.getenv("LINGUIST_CMD", "github-linguist")
 WORKDIR = Path("/tmp/repocache")      # container local clone cache
 WORKDIR.mkdir(parents=True, exist_ok=True)
@@ -115,13 +120,18 @@ class VersionBuilder:
                 try:
                     fut.result()
                 except Exception as e:
-                    log.error("Task %s failed: %s", t, e)
+                    noisy_log.warning("skip %s – %s", t["package"], e)
+
 
     # individual task ---------------------------------------------------------
     def _handle_task(self, t: Dict):
         repo_path = WORKDIR / t["repo_name"]
         # 1. clone or fetch
-        repo = self._ensure_repo(repo_path, t["url"])
+        try:
+            repo = self._ensure_repo(repo_path, t["url"])
+        except Exception as e:
+            noisy_log.warning("clone failed for %s: %s", t["package"], e)
+            return
         # 2. checkout
         commit = self._checkout(repo, t["version"])
         # 3. linguist
