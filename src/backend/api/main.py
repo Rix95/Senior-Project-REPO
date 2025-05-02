@@ -1,4 +1,6 @@
-from routers.items import router as osv_vulnerabilities_router
+from routers.items.osv_vulnerabilities import (
+    router as osv_vulnerabilities_router,
+)
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from osv.download_ecosystem_data import download_and_extract_all_ecosystems
@@ -11,6 +13,9 @@ from osv.vulnerability_repo_mapper import VulnerabilityRepoMapper
 from version_builder.builder import VersionBuilder  
 from osv.vulnerability_repo_mapper import main as repo_mapper
 from typing import List
+from fastapi import BackgroundTasks
+from tasks.revision_pipeline import run as run_revision_pipeline    # ← new import
+
 
 app = FastAPI()
 app.add_middleware(
@@ -30,30 +35,45 @@ def main():
 
 @app.post("/update_osv_vulnerabilities")
 async def update_osv_vulnerabilities():
-    # Download and load vulnerabilities (raw data)
+    """
+    1.  Raw OSV → Neo4j
+    2.  Export package-centric JSON
+    3.  Build minimal hitting sets (same JSON)
+    4.  Feed that JSON into VersionBuilder
+    """
+    # ── step-1 ────────────────────────────────────────────────────────────
     download_and_extract_all_ecosystems()
     extract_vulnerability_ids()
-    await load_osv()
-    
-    # Compute and store minimal affected versions
+    await load_osv()                       # populates Neo4j raw data
+
     mapper = VulnerabilityRepoMapper()
-    if mapper.connect():
-        try:
-            mapper.build_minimal_hitting_sets_per_package("OSV")
-        except Exception as e:
-            print(f"Error building minimal hitting sets: {e}")
-        finally:
-            mapper.close()
-            
-        # 3. build revision metadata
-        try:
-            latest_json = output_file or mapper.package_cve_versions_last
-            vb = VersionBuilder(latest_json, workers=4)
-            vb.run()
-        except Exception as e:
-            print(f"Version builder failed: {e}")
-     
-    return {"message": "OSV vulnerabilities & revision metadata updated successfully"}
+    try:
+        if not mapper.connect():
+            raise RuntimeError("Neo4j unavailable")
+
+        # ── step-2: create JSON snapshot of package ↔ versions ───────────
+        mapper.export_to_json_streaming()             # sets package_cve_versions_last
+        json_path = mapper.package_cve_versions_last
+
+        # ── step-3: compute minimal hitting sets per package ──────────────
+        mapper.build_minimal_hitting_sets_per_package(
+            input_file=json_path,
+            repo_name="OSV"
+        )
+
+    finally:
+        mapper.close()
+
+    # ── step-4: build repo / revision metadata via Git + Linguist ─────────
+    try:
+        vb = VersionBuilder(json_path, workers=4)
+        vb.run()
+    except Exception as e:
+        raise HTTPException(status_code=500,
+                            detail=f"VersionBuilder failed: {e}")
+
+    return {"message": "OSV vulnerabilities & revision metadata updated"}
+
 
 @app.post("/map_vulnerabilities")
 async def map_vulnerabilities():
@@ -75,6 +95,16 @@ async def compute_minimal_hitting_sets():
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
     finally:
         mapper.close()
+        
+@app.post("/build_revision_metadata", tags=["maintenance"])
+async def build_revision_metadata(background_tasks: BackgroundTasks):
+    """
+    Triggers the full package→CVE → minimal-set → VersionBuilder pipeline.
+    Runs in the background so the request returns immediately.
+    """
+    background_tasks.add_task(run_revision_pipeline)
+    return {"status": "started", "detail": "Revision-metadata pipeline running in background"}
+
 
 # Run script every week
 scheduler = BackgroundScheduler()

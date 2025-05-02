@@ -5,10 +5,11 @@ from typing import Dict, List
 from git import Repo, InvalidGitRepositoryError, GitCommandError
 from neo4j import GraphDatabase
 from config import NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD
+from packageurl import PackageURL
 
 log = logging.getLogger(__name__)
 LINGUIST_CMD = os.getenv("LINGUIST_CMD", "github-linguist")
-WORKDIR      = Path("/tmp/repocache")      # container local clone cache
+WORKDIR = Path("/tmp/repocache")      # container local clone cache
 WORKDIR.mkdir(parents=True, exist_ok=True)
 
 class VersionBuilder:
@@ -44,29 +45,66 @@ class VersionBuilder:
         """
         tasks = []
         for p, pdata in pkg_map.items():
-            repo_url = self._guess_repo_url(p, pdata["ecosystem"])
+            repo_url = (
+                self._purl_to_git_url(pdata.get("purl"))
+                or self._guess_repo_url(p, pdata["ecosystem"])
+            )
             if not repo_url:
                 log.warning("Could not infer VCS location for %s – skipped", p)
                 continue
-            for v in pdata["minimal_versions"]:
+            # use .get() so we don't crash on missing key
+            for v in pdata.get("minimal_versions", []):
+                # skip garbage entries that are actually purls
+                if isinstance(v, str) and v.startswith("pkg:"):
+                    log.warning("Skip invalid version %s for %s", v, p)
+                    continue
                 tasks.append({
                     "package": p,
                     "repo_name": repo_url.split("/")[-1].removesuffix(".git"),
                     "url": repo_url,
+                    "purl": pdata.get("purl", ""),
                     "version": v
                 })
         log.info("Prepared %d clone/analysis tasks", len(tasks))
         return tasks
 
-    # naive heuristics – adjust / extend per ecosystem ------------------------
+    def _purl_to_git_url(self, purl_str: str | None) -> str | None:
+        """
+        Convert a PackageURL to a cloneable Git URL when possible.
+        Supports purl types: github, gitlab, bitbucket, pypi (github repo in qualifiers).
+        """
+        if not purl_str:
+            return None
+        try:
+            purl = PackageURL.from_string(purl_str)
+        except ValueError:
+            return None
+        
+        # most ecosystems embed the VCS in qualifiers
+        if purl.type in {"github", "gitlab", "bitbucket"}:
+            return f"https://{purl.type}.com/{purl.namespace}/{purl.name}.git"
+        # fallback – many PyPI / npm packages carry a 'repository_url' qualifier
+        repo_q = purl.qualifiers.get("repository_url") if purl.qualifiers else None
+        if repo_q and repo_q.startswith("http"):
+            return repo_q.rstrip("/") + ".git" if not repo_q.endswith(".git") else repo_q
+        
+        return None
+
     def _guess_repo_url(self, package: str, ecosystem: str) -> str | None:
-        if ecosystem.lower() in {"pypi", "python", "crates.io", "npm", "packagist"}:
-            # try GitHub owner/repo style if slash present
+        eco = ecosystem.lower()
+
+        # GitHub-style (pypi, npm, composer, …)
+        if eco in {"pypi", "python", "crates.io", "npm", "packagist", "composer"}:
             if "/" in package:
                 return f"https://github.com/{package}.git"
-        if ecosystem.lower() == "go":
-            return f"https://{package}.git"      # go modules already full path
+
+        # Go modules often use the import path directly
+        if eco == "go" and "/" in package and "." in package.split("/")[0]:
+            # e.g.  github.com/user/proj  →  https://github.com/user/proj.git
+            return f"https://{package}.git"
+
         return None
+
 
     # main thread pool --------------------------------------------------------
     def _process_tasks(self, tasks: List[Dict]):
@@ -89,7 +127,15 @@ class VersionBuilder:
         # 3. linguist
         lg_data = self._run_linguist(repo_path)
         # 4. push to Neo4j
-        self._write_neo4j(t["repo_name"], t["package"], t["version"], commit, lg_data)
+        self._write_neo4j(
+            repo_name=t["repo_name"],
+            package=t["package"],
+            version=t["version"],
+            commit=commit,
+            lg=lg_data,
+            url=t["url"],
+            purl=t.get("purl", "")
+        )
 
     def _ensure_repo(self, path: Path, url: str) -> Repo:
         try:
@@ -115,8 +161,8 @@ class VersionBuilder:
                 for lang, b in parsed.items()}
 
     # ---------------- Neo4j write -------------------------------------------
-    def _write_neo4j(self, repo_name: str, package: str, version: str,
-                     commit: str, lg: Dict):
+    def _write_neo4j(self, *, repo_name: str, package: str, version: str,
+                     commit: str, lg: Dict, url: str, purl: str):
         full_id = f"{repo_name}|{version}"
         languages = [{
             "uid": f"{k}|{v['bytes']}",
@@ -127,11 +173,13 @@ class VersionBuilder:
         size_bytes = sum(v["bytes"] for v in lg.values())
 
         cypher = """
-        MERGE (repo:CodeRepo {name:$repo, url:$url})
+        MERGE (repo:CodeRepo {name:$repo})
+        ON CREATE SET repo.url = $url,
+                        repo.purl = $purl
         MERGE (rev:Revision {full_id:$fid})
-              ON CREATE SET rev.version=$version,
-                            rev.commit=$commit,
-                            rev.size_bytes=$size
+        ON CREATE SET rev.version    = $version,
+                        rev.commit     = $commit,
+                        rev.size_bytes = $size
         MERGE (repo)-[:HAS_REVISION]->(rev)
 
         WITH rev
@@ -152,6 +200,15 @@ class VersionBuilder:
         MERGE (v)-[:OBSERVED_IN]->(rev)
         """
         with self.driver.session() as sess:
-            sess.run(cypher, repo=repo_name, url=f"https://github.com/{repo_name}",
-                     fid=full_id, version=version, commit=commit,
-                     size=size_bytes, langs=languages, package=package)
+            sess.run(
+                cypher,
+                repo=repo_name,
+                url=url,
+                purl=purl,
+                fid=full_id,
+                version=version,
+                commit=commit,
+                size=size_bytes,
+                langs=languages,
+                package=package,
+            )

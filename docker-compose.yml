@@ -16,6 +16,7 @@ services:
     environment:
       - VITE_API_URL=http://fastapi:8000
       - PYTHONUNBUFFERED=1
+      - "LINGUIST_CMD=${LINGUIST_CMD:-github-linguist}"
     command: sh -c "pip install uvicorn && python -m src.backend.api.main"
     restart: unless-stopped
     networks:

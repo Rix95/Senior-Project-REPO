@@ -1,7 +1,8 @@
 FROM python:3.13
-
 # Set the working directory in the container
 WORKDIR /app
+
+ENV PYTHONPATH="/app/src:${PYTHONPATH}"
 
 # 1) Install Ruby, build-essential, cmake, libgit2-dev, and pkg-config
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -34,6 +35,8 @@ ENV PYTHONPATH="${PYTHONPATH}:/app"
 
 # Expose the port the app runs on
 EXPOSE 8000
+
+ENV LINGUIST_CMD="github-linguist"
 
 # Run the FastAPI app directly using Python
 CMD ["python", "-m", "src.backend.api.main"]
