@@ -124,6 +124,31 @@ async def search_package_by_name(name: str = Query(..., description="Package nam
 
 
 ###
+# Query function to query vulnerabilities by package and ecosystem
+def get_vulnerabilities_by_package_and_ecosystem(package: str, ecosystem: str, driver) -> List[dict]:
+    query = """
+        MATCH (p:Package {name: $package, ecosystem: $ecosystem})<-[:AFFECTS]-(v:Vulnerability)
+        RETURN v.id AS VulnerabilityID, v.summary AS Summary, v.published AS PublishedDate
+    """
+    with driver.session() as session:
+        result = session.run(query, package=package, ecosystem=ecosystem)
+        return [record.data() for record in result]
+        
+# FastAPI endpoint to get packages by name, this returns package and ecosystem.
+@app.get("/search_vulnerabilities")
+async def search_vulnerabilities(
+    package: str = Query(..., description="Package name to search for"),
+    ecosystem: str = Query(..., description="Ecosystem of the package"),
+    driver=Depends(get_neo4j_driver)
+):
+    results = get_vulnerabilities_by_package_and_ecosystem(package, ecosystem, driver)
+    return {"results": results}
+
+
+
+
+
+###
 
 # New endpoint to get the minimal versions for a repository
 @app.get("/minimal_versions/{repo_name}")
