@@ -14,7 +14,9 @@ from version_builder.builder import VersionBuilder
 from osv.vulnerability_repo_mapper import main as repo_mapper
 from typing import List
 from fastapi import BackgroundTasks
-from tasks.revision_pipeline import run as run_revision_pipeline    # ← new import
+from tasks.revision_pipeline import run as run_revision_pipeline
+from tasks.run_version_builder import run_once as run_version_builder
+# ← new import
 
 
 app = FastAPI()
@@ -96,14 +98,17 @@ async def compute_minimal_hitting_sets():
     finally:
         mapper.close()
         
-@app.post("/build_revision_metadata", tags=["maintenance"])
-async def build_revision_metadata(background_tasks: BackgroundTasks):
+@app.post("/build_revision_metadata")
+async def build_revision_metadata():
     """
-    Triggers the full package→CVE → minimal-set → VersionBuilder pipeline.
-    Runs in the background so the request returns immediately.
+    Kick off VersionBuilder on the fixed JSON in /app/backup/.
+    Runs in a background thread so the request returns immediately.
     """
-    background_tasks.add_task(run_revision_pipeline)
-    return {"status": "started", "detail": "Revision-metadata pipeline running in background"}
+    from concurrent.futures import ThreadPoolExecutor
+    pool = ThreadPoolExecutor(max_workers=1)
+    pool.submit(run_version_builder)        # fire‑and‑forget
+    return {"status": "started",
+            "detail": "Revision‑metadata pipeline running in background"}
 
 
 # Run script every week

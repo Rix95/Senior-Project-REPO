@@ -26,6 +26,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 ARG ENV=production
 RUN if [ "$ENV" = "development" ]; then pip install --no-cache-dir -r requirements-dev.txt; fi
 
+# copy the pre‑computed minimal‑set file
+COPY backup/package_minimal_sets_OSV_20250503_194452.json /app/backup/
+
 # Copy the rest of the application code
 COPY . .
 
