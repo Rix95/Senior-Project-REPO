@@ -23,13 +23,28 @@ services:
     depends_on:
       neo4j:
         condition: service_healthy
+      ollama:
+        condition: service_started
+
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"  # Ollama HTTP API
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - app-network
+    environment:
+      - OLLAMA_MODELS=/root/.ollama/models
 
   neo4j:
     image: neo4j:5.13.0
     container_name: neo4j
     ports:
-      - "7474:7474" # HTTP
-      - "7687:7687" # Bolt
+      - "7474:7474"
+      - "7687:7687"
     volumes:
       - neo4j_data:/data
       - neo4j_logs:/logs
@@ -40,7 +55,7 @@ services:
       interval: 30s
       timeout: 30s
       retries: 3
-      start_period: 120s # Give Neo4j more time to start
+      start_period: 120s
     environment:
        - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
        - NEO4J_dbms_memory_heap_max__size=8G
@@ -83,8 +98,8 @@ volumes:
   neo4j_logs:
   neo4j_import:
   neo4j_plugins:
+  ollama_data:
   venv:
-
 
 networks:
   app-network:
