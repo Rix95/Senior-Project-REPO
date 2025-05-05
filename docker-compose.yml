@@ -80,7 +80,7 @@ services:
       context: ./src/vulnerability-frontend
     container_name: frontend
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://fastapi:8000
       - ROLLUP_DISABLE_NATIVE=1
     ports:
       - "5173:5173"
